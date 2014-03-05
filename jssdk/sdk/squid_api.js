@@ -180,11 +180,13 @@ define(['jquery', 'backbone', 'js/jquery-url'], function($, Backbone) {
         login: null,
 
         resetPassword: null,
-        
-        defaultLoginUrl : "https://api.squidsolutions.com/release/v4.2/api/oauth" + "?client_id=" + squid_api.clientId + "&" + "customerId=" + squid_api.customerId,
 
         urlRoot: function() {
             return this.baseRoot() + "/user";
+        },
+        
+        getDefaultLoginUrl : function() {
+            return "https://api.squidsolutions.com/release/v4.2/api/oauth" + "?client_id=" + squid_api.clientId + "&" + "customerId=" + squid_api.customerId;
         },
 
         /**
