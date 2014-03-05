@@ -10,3 +10,5 @@ Structure :
 * /jssdk/sdk/templates : Handlebars templates used by the widgets
 * /jssdk/sdk/widgets : Backbone views (widgets).
 
+Have fun.
+
