@@ -56,9 +56,9 @@ define([
 	    login: function(event) {
 	        var loginUrl;
 	        if (this.loginUrl == null) {
-	           loginUrl = this.model.defaultLoginUrl;
+	           loginUrl = this.model.getDefaultLoginUrl();
 	        } else {
-	            loginUrl = this.loginUrl;
+	           loginUrl = this.loginUrl;
 	        }
 	        var redirectUri;
 	        if (this.redirectUri == null) {

@@ -4,7 +4,7 @@ if (document.location.href.indexOf("disable_cache_buster") < 0) {
     cacheBuster = "t=" + (new Date()).getTime();
 }
 
-var require = {
+require = {
     paths: {
         jquery: 'js/jquery.min',
         jqueryui : 'js/jquery-ui-1.8.24.custom.min',
