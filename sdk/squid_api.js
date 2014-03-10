@@ -1,4 +1,4 @@
-define(['jquery', 'backbone', 'js/jquery-url'], function($, Backbone) {
+define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
 
     var squid_api = {
 

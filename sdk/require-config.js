@@ -3,19 +3,26 @@ var cacheBuster = "";
 if (document.location.href.indexOf("disable_cache_buster") < 0) {
     cacheBuster = "t=" + (new Date()).getTime();
 }
-
+var jssdk = jssdk || 'https://c9.io/squidsolutions/squid-jssdk/workspace';
 require = {
     paths: {
-        jquery: 'js/jquery.min',
-        jqueryui : 'js/jquery-ui-1.8.24.custom.min',
-        underscore: 'js/underscore-min',
-        backbone: 'js/backbone-min',
-        handlebars: 'js/handlebars-1.0.rc.2',
-        hbs: 'js/hbs',
-        i18nprecompile: 'js/i18nprecompile',
-        json2: 'js/json2',
-        templates: 'templates',
-        d3 : "js/d3.v3.min"
+        jssdk : jssdk,
+        jquery : jssdk+'/js/jquery.min',
+        jqueryui : jssdk+'/js/jquery-ui-1.8.24.custom.min',
+        hbs: jssdk+'/js/hbs',
+        'Handlebars' : 'Handlebars',
+        underscore: jssdk+'/js/underscore-min',
+        backbone: jssdk+'/js/backbone.1.1.0-min',
+        d3 : jssdk+"/js/d3.v3.min"
+    },
+    shim: {
+        'backbone': {
+            deps: ['underscore', 'jquery'],
+            exports: 'Backbone'
+        },
+        'underscore': {
+            exports: '_'
+        }
     },
     hbs: {
         templateExtension: 'hbs',
@@ -24,6 +31,7 @@ require = {
         disableI18n: true
     },
     urlArgs: cacheBuster,
+    waitSeconds : 30,
     config: {
         text: {
             useXhr: function(url, protocol, hostname, port) {

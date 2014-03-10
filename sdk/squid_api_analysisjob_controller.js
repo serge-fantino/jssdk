@@ -1,4 +1,4 @@
-define(['backbone', 'sdk/squid_api'], function(Backbone, squid_api) {
+define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
 
     var controller = {
 
