@@ -1,4 +1,4 @@
-define(['jquery','backbone', 'hbs!sdk/templates/squid_api_filters_continuous_widget',
+define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuous_widget',
 'jqueryui'], function($, Backbone, template) {
 
     var ContinuousFilterView = Backbone.View.extend({

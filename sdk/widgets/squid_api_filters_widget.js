@@ -1,7 +1,7 @@
 define(['backbone', 
-'sdk/widgets/squid_api_filters_categorical_widget', 
-'sdk/widgets/squid_api_filters_continuous_widget',
-'hbs!sdk/templates/squid_api_filters_widget'], 
+'jssdk/sdk/widgets/squid_api_filters_categorical_widget', 
+'jssdk/sdk/widgets/squid_api_filters_continuous_widget',
+'hbs!jssdk/sdk/templates/squid_api_filters_widget'], 
 function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
 
     var View = Backbone.View.extend({

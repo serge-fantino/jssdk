@@ -1,13 +1,14 @@
-define(['backbone', 'hbs!sdk/templates/squid_api_metric_value', 'd3'], function(Backbone, template) {
+define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_metric_value', 'd3'], function(Backbone, template) {
 
     var SingleValueView = Backbone.View.extend({
         
         viewInitialized : false,
 
-        initialize: function() {
+        initialize: function(options) {
             if (this.model) {
                 this.model.on('change:results', this.render, this);
             }
+            this.options = options;
         },
 
         setModel: function(model) {

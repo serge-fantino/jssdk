@@ -129,8 +129,8 @@ define([
 	      ++x;
 	    }
 	
-	    //
-	    moveSinksRight(x);
+	    // squid Ticket #2934
+	    //moveSinksRight(x);
 	    scaleNodeBreadths((size[0] - nodeWidth) / (x - 1));
 	  }
 	

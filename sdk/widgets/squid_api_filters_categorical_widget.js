@@ -1,7 +1,7 @@
 define([
   'jquery',
   'backbone',
-  'hbs!sdk/templates/squid_api_filters_categorical_widget'
+  'hbs!jssdk/sdk/templates/squid_api_filters_categorical_widget'
 ], function($, Backbone, template) {
 
 	var CategoricalFilterView = Backbone.View.extend( {
