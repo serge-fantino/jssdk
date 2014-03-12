@@ -83,7 +83,7 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
          */
         init: function(args) {
             var apiURL = args.apiURL;
-            if (apiURL === null) {
+            if (!apiURL) {
                 apiURL = "https://api.squidsolutions.com/release/v4.2/rs";
             }
             this.setApiURL(apiURL);
