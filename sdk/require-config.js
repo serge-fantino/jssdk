@@ -3,7 +3,7 @@ var cacheBuster = "";
 if (document.location.href.indexOf("disable_cache_buster") < 0) {
     cacheBuster = "t=" + (new Date()).getTime();
 }
-var jssdk = jssdk || 'https://c9.io/squidsolutions/squid-jssdk/workspace';
+var jssdk = jssdk || 'https://api.squidsolutions.com/jssdk/release';
 require = {
     paths: {
         jssdk : jssdk,
