@@ -7,10 +7,15 @@ define([
 	    loginUrl: null,
 
 	    redirectUri: null,
+	    
+	    autoShow: true,
 
-	    initialize: function() {
+	    initialize: function(options) {
 	        if (this.model) {
 	            this.model.on("change:login", this.render, this);
+	        }
+	        if (options.autoShow) {
+	        	this.autoShow = options.autoShow;
 	        }
 	    },
 
@@ -39,21 +44,28 @@ define([
 	            var userLogin = this.model.get("login");
 	            var loginObj = this.$el.find("#ko");
 	            var logoutObj = this.$el.find("#ok");
-	            if (userLogin && userLogin != "") { // already logged in
+	            if (userLogin && userLogin != "") {
+	            	// already logged in
 	                logoutObj.find("#user").html(userLogin);
 	                loginObj.hide();
 	                logoutObj.show();
+	                this.$el.show();
+	            } else {
+	            	if (this.autoShow) {
+	            		this.login();
+	            	} else {
+	            		loginObj.show();
+	            		logoutObj.hide();
+	            		this.$el.show();
+	            	}
 	            }
-	            else {
-	                loginObj.show();
-	                logoutObj.hide();
-	            }
+	        } else {
+	        	this.$el.show();
 	        }
-	        this.$el.show();
 	        return this;
 	    },
 
-	    login: function(event) {
+	    login: function() {
 	        var loginUrl;
 	        if (this.loginUrl == null) {
 	           loginUrl = this.model.getDefaultLoginUrl();
@@ -80,7 +92,7 @@ define([
             window.location = url + "redirect_uri=" + redirectUri;
 	    },
 	    
-	    logout: function(event) {
+	    logout: function() {
 	        this.model.logout();
 	    },
 	    
