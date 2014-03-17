@@ -87,6 +87,7 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                     // attach observers
                     var me = this;
                     this.$el.click(function(e) {
+                    	// on click, show the date pickers
                         e.stopPropagation();
                         if (!me.pickerVisible) {
                             // build the date pickers (warn : unsing classes instead of id to select the pickers as this is a bug in datePicker)
@@ -96,11 +97,7 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                                     changeYear: true,
                                     defaultDate: me.startDate,
                                     onSelect : function(date) {
-                                        me.$el.find("#pickerContainer").fadeOut("fast");
                                         me.startDate = new Date(Date.parse(date));
-                                        if (me.parent) {
-                                            me.parent.changeSelection(me);
-                                        }
                                     }
                                 });
                             var p2 = me.$el.find(".endDatePicker");
@@ -109,23 +106,44 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                                     changeYear: true,
                                     defaultDate: me.endDate,
                                     onSelect : function(date) {
-                                        me.$el.find("#pickerContainer").fadeOut("fast");
                                         me.endDate = new Date(Date.parse(date));
-                                        if (me.parent) {
-                                            me.parent.changeSelection(me);
-                                        }
                                     }
                                 });
+                            
                             me.$el.find("#pickerContainer").show();
                             me.pickerVisible = true;
                         }
                     });
+                    
+                    // close on click outside of the picker
                     $(document).click(function(e) {
                         if (me.pickerVisible) {
                             me.$el.find("#pickerContainer").hide();
                             me.pickerVisible = false;
                         }
                     });
+                    
+                    // close on click on "cancel"
+                    me.$el.find(".btn-default").click(function(e) {
+                    	e.stopPropagation();
+                        if (me.pickerVisible) {
+                            me.$el.find("#pickerContainer").hide();
+                            me.pickerVisible = false;
+                        }
+                    });
+                    
+                    // process on click on "ok"
+                    me.$el.find(".btn-primary").click(function(e) {
+                    	e.stopPropagation();
+                        if (me.pickerVisible) {
+                        	me.$el.find("#pickerContainer").fadeOut("fast");
+                        	me.pickerVisible = false;
+                            if (me.parent) {
+                                me.parent.changeSelection(me);
+                            }
+                        }
+                    });
+                    
                     this.initialized = true;
                 }
             }
