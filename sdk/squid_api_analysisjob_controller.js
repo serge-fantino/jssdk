@@ -80,14 +80,20 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
          */
         getAnalysisJobResults: function(analysisModel, filters) {
             if ((analysisModel.get("readyStatus") === true) && (analysisModel.get("jobId"))) {
-                console.log("getAnalysisResults new");
+                console.log("getAnalysisJobResults");
                 var analysisJobResult = new controller.ProjectAnalysisJobResult();
                 analysisJobResult.set("id", analysisModel.get("jobId"));
 
                 analysisJobResult.on("change", function(event) {
                     // update the analysis Model
-                    console.log("getAnalysisResults results : "+event.get("id"));
-                    analysisModel.set({"results" : event.toJSON(), "error" : event.get("error")});
+                    if (event.get("error") == null) {
+                    	var results = event.toJSON();
+                    	console.log("getAnalysisResults # rows : "+results.rows.length);
+                    	analysisModel.set({"results" : results});
+                    } else {
+                    	console.log("getAnalysisResults error : "+event.get("error"));
+                    	analysisModel.set({"error" : event.get("error")});
+            		}
                     squid_api.model.error.set("errorMessage", null);
                 }, this);
 

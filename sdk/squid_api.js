@@ -1,5 +1,14 @@
 define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
+	
+	// just make shure console.log will not crash
+	if (!window.console) {
+		window.console = {
+			log : function() {
+			}
+		};
+	}
 
+	// Squid API definition
     var squid_api = {
 
         apiURL: null,
