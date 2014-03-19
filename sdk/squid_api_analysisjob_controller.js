@@ -70,9 +70,38 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
             analysisModel.once("change:jobId", function() {
                 me.getAnalysisJobResults(analysisModel, filters);
             });
-
             this.createAnalysisJob(analysisModel, filters);
-
+        },
+        
+        /**
+         * Create (and execute) a new MultiAnalysisJob, retrieve the results 
+         * and set the 'done' or 'error' attribute to true when all analysis are done or any failed.
+         */
+        computeMultiAnalysis: function(multiAnalysisModel, filters) {
+            var me = this;
+            multiAnalysisModel.set({"done": false, "error": false},{"silent":true});
+            var analyses = multiAnalysisModel.get("analyses");
+            var analysesCount = analyses.length;
+            var analysesPendingCount = analysesCount;
+            for (var i=0; i<analysesCount; i++) {
+            	var analysisModel = analyses[i];
+	            analysisModel.once("change:jobId", function(model) {
+	            	model.on("change", function() {
+	            		if (model.get("error") != null) {
+	            			multiAnalysisModel.set("error", true);
+	            		} else {
+	            			if (model.get("results") != null) {
+	            				analysesPendingCount--;
+	    	            		if (analysesPendingCount == 0) {
+	    	            			multiAnalysisModel.set("done", true);
+	    	            		}
+	            			}
+	            		}
+	            	});
+	                me.getAnalysisJobResults(model, filters);
+	            });
+	            this.createAnalysisJob(analysisModel, filters);
+            }
         },
         
         /**
@@ -161,6 +190,12 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                 this.set("metrics", metrics);
                 return this;
             }
+        }),
+        
+        MultiAnalysisModel: Backbone.Model.extend({
+        	analyses : null,
+        	done : false,
+        	error: false
         })
 
     };

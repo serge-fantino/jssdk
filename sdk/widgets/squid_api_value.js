@@ -1,12 +1,12 @@
 define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_metric_value', 'd3'], function(Backbone, template) {
 
-    var SingleValueView = Backbone.View.extend({
+    var View = Backbone.View.extend({
         
         viewInitialized : false,
 
         initialize: function(options) {
             if (this.model) {
-                this.model.on('change:results', this.render, this);
+                this.model.on('change:value', this.render, this);
             }
             this.options = options;
         },
@@ -29,26 +29,17 @@ define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_metric_value', 'd3'], fun
 			    this.$el.find(".content").hide();
 				this.$el.find(".sq-wait").hide();
 			} else {
-    			var jsonData = this.model.get("results");
+    			var jsonData = this.model.toJSON();
     			if (jsonData) {
-                    var colIdx = null;
-                    for (var i = 0; i < jsonData.cols.length; i++) {
-                        var col = jsonData.cols[i];
-                        if (col.pk.metricId) {
-                            colIdx = i;
-                        }
+    				var val = jsonData.value;
+    				if (this.options.format) {
+                        var f = d3.format(this.options.format);
+                        val = f(val);
                     }
-                    if (colIdx !== null) {
-                        var label = jsonData.cols[colIdx].lname;
-                        var val = jsonData.rows[0].v[colIdx];
-                        if (this.options.format) {
-                            var f = d3.format(this.options.format);
-                            val = f(val);
-                        }
-                        var content = {"label" : label, "value" : val};
-                        var html = template(content);
-    			        this.$el.html(html);
-                    }
+                    var content = {"label" : jsonData.label, "value" : val};
+                    var html = template(content);
+			        this.$el.html(html);
+                    
     			    this.$el.find(".content").show();
     				this.$el.find(".sq-wait").hide();
     				this.$el.find(".sq-error").hide();
@@ -64,5 +55,5 @@ define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_metric_value', 'd3'], fun
 
     });
 
-    return SingleValueView;
+    return View;
 });
