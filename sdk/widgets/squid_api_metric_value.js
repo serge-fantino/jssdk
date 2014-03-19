@@ -25,7 +25,6 @@ define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_metric_value', 'd3'], fun
 			
 			var errorData = this.model.get("error");
 			if (errorData) {
-			    console.error(errorData.message);
 			    this.$el.find(".sq-error").show();
 			    this.$el.find(".content").hide();
 				this.$el.find(".sq-wait").hide();
