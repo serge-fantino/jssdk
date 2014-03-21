@@ -2,13 +2,14 @@ define(['backbone',
 'jssdk/sdk/widgets/squid_api_filters_categorical_widget', 
 'jssdk/sdk/widgets/squid_api_filters_continuous_widget',
 'hbs!jssdk/sdk/templates/squid_api_filters_widget'], 
-function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
-
+function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate) {
+    
     var View = Backbone.View.extend({
         childViews: null,
         filterIds: null,
         displayCategorical: true,
         displayContinuous: true,
+        template : null,
         continuousFilterTemplate : null,
         categoricalFilterTemplate : null,
         pickerAlwaysVisible : false,
@@ -37,6 +38,11 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
             }
             if (options.pickerVisible && (options.pickerVisible == true)) {
                 this.pickerAlwaysVisible = true;
+            }
+            if (options.template) {
+                this.template = options.template;
+            } else {
+                this.template = defaultTemplate;
             }
         },
 
@@ -98,7 +104,7 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
             var container;
             if (!this.$el.html()) {
                     // first call, setup the child views
-                    this.$el.html(template());
+                    this.$el.html(this.template());
                     
             }
             container = this.$el.find(".sq-content");
