@@ -11,6 +11,8 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
         displayContinuous: true,
         continuousFilterTemplate : null,
         categoricalFilterTemplate : null,
+        pickerAlwaysVisible : false,
+        
         categoricalFilterModel: Backbone.Model.extend({
             facetId: null,
             dimension: null,
@@ -26,12 +28,15 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
             selectedItems: null
         }),
 
-        initialize: function() {
+        initialize: function(options) {
             if (this.model) {
                 // listen for some model events
                 this.model.on('change:selection', this.render, this);
                 this.model.on('change:error', this.render, this);
                 this.model.on('change:enabled', this.setEnable, this);
+            }
+            if (options.pickerVisible && (options.pickerVisible == true)) {
+                this.pickerAlwaysVisible = true;
             }
         },
 
@@ -94,13 +99,14 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
             if (!this.$el.html()) {
                     // first call, setup the child views
                     this.$el.html(template());
-                    container = this.$el.find(".sq-content");
+                    
             }
+            container = this.$el.find(".sq-content");
             var errorData = this.model.get("error");
 			if (errorData) {
 			    console.error(errorData.message);
 			    this.$el.find(".sq-error").show();
-			    this.$el.find(".content").hide();
+			    this.$el.find(".sq-content").hide();
 				this.$el.find(".sq-wait").hide();
 			} else {
 			    this.$el.find(".sq-error").hide();
@@ -133,18 +139,18 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
                             var model = null;
                             var view = null;
                             var facetContainerId = "sq-facet_" + i;
-        
-                            this.$el.append("<div id='"+facetContainerId+"'></div>");
-                            var filterEl = this.$el.find("#"+facetContainerId);
-                            
+                            var filterEl;
                             // create a sub view (applying display rules)
                             if ((this.filterIds == null) || (this.filterIds.indexOf(facet.dimension.oid)>-1)) {
                                 if (facet.dimension.type == "CONTINUOUS") {
                                     if (this.displayContinuous) {
+                                        container.append("<div id='"+facetContainerId+"'></div>");
+                                        filterEl = this.$el.find("#"+facetContainerId);
                                         model = new this.continuousFilterModel();
                                         view = new ContinuousFilterView({
                                             model: model,
-                                            el: filterEl
+                                            el: filterEl,
+                                            pickerVisible : this.pickerAlwaysVisible
                                         });
                                         view.setTemplate(this.continuousFilterTemplate);
                                     } else {
@@ -153,6 +159,8 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
                                 }
                                 if (facet.dimension.type == "CATEGORICAL") {
                                     if (this.displayCategorical) {
+                                        container.append("<div id='"+facetContainerId+"'></div>");
+                                        filterEl = this.$el.find("#"+facetContainerId);
                                         model = new this.categoricalFilterModel();
                                         view = new CategoricalFilterView({
                                             model: model,
@@ -166,10 +174,6 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, template) {
                             }
                             if (view) {
                                 view.parent = this;
-                                if (!filterEl) {
-                                    // append the sub view to the filter view
-                                    container.append(view.$el);
-                                }
                                 // set view model
                                 model.set({
                                     facetId: facet.id,

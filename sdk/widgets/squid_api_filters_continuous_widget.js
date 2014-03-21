@@ -9,12 +9,17 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
         model: null,
         initialized : false,
         pickerVisible : false,
+        pickerAlwaysVisible : false,
         parent : null,
         template : template,
 
-        initialize: function() {
+        initialize: function(options) {
             if (this.model) {
                 this.model.on('change', this.render, this);
+            }
+            if (options.pickerVisible && (options.pickerVisible == true)) {
+                this.pickerVisible = true;
+                this.pickerAlwaysVisible = true;
             }
         },
 
@@ -28,7 +33,7 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                 this.template = t;
             }
         },
-        
+
         getSelectedItems: function() {
             var d1 = this.startDate;
             var d2 = this.endDate;
@@ -86,69 +91,84 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                     
                     // attach observers
                     var me = this;
-                    this.$el.click(function(e) {
-                    	// on click, show the date pickers
-                        e.stopPropagation();
-                        if (!me.pickerVisible) {
-                            // build the date pickers (warn : unsing classes instead of id to select the pickers as this is a bug in datePicker)
-                            var p1 = me.$el.find(".startDatePicker");
-                            p1.datepicker({
-                                    changeMonth: true,
-                                    changeYear: true,
-                                    defaultDate: me.startDate,
-                                    onSelect : function(date) {
-                                        me.startDate = new Date(Date.parse(date));
-                                    }
-                                });
-                            var p2 = me.$el.find(".endDatePicker");
-                            p2.datepicker({
-                                    changeMonth: true,
-                                    changeYear: true,
-                                    defaultDate: me.endDate,
-                                    onSelect : function(date) {
-                                        me.endDate = new Date(Date.parse(date));
-                                    }
-                                });
-                            
-                            me.$el.find("#pickerContainer").show();
-                            me.pickerVisible = true;
-                        }
-                    });
                     
-                    // close on click outside of the picker
-                    $(document).click(function(e) {
-                        if (me.pickerVisible) {
-                            me.$el.find("#pickerContainer").hide();
-                            me.pickerVisible = false;
-                        }
-                    });
-                    
-                    // close on click on "cancel"
-                    me.$el.find(".btn-default").click(function(e) {
-                    	e.stopPropagation();
-                        if (me.pickerVisible) {
-                            me.$el.find("#pickerContainer").hide();
-                            me.pickerVisible = false;
-                        }
-                    });
-                    
-                    // process on click on "ok"
-                    me.$el.find(".btn-primary").click(function(e) {
-                    	e.stopPropagation();
-                        if (me.pickerVisible) {
-                        	me.$el.find("#pickerContainer").fadeOut("fast");
-                        	me.pickerVisible = false;
+                    if (!me.pickerAlwaysVisible) {
+                        me.$el.click(function(e) {
+                        	// on click, show the date pickers
+                            e.stopPropagation();
+                            if (!me.pickerVisible) {
+                                me.renderPicker(me);
+                                me.pickerVisible = true;
+                            }
+                        });
+                        
+                        // close on click outside of the picker
+                        $(document).click(function(e) {
+                            if (me.pickerVisible) {
+                                me.$el.find("#pickerContainer").hide();
+                                me.pickerVisible = false;
+                            }
+                        });
+                        
+                        // close on click on "cancel"
+                        me.$el.find(".btn-default").click(function(e) {
+                            e.stopPropagation();
+                            if (me.pickerVisible) {
+                                me.$el.find("#pickerContainer").hide();
+                                me.pickerVisible = false;
+                            }
+                        });
+                        
+                        // process on click on "ok"
+                        me.$el.find(".btn-primary").click(function(e) {
+                            e.stopPropagation();
+                            if (me.pickerVisible) {
+                                me.$el.find("#pickerContainer").fadeOut("fast");
+                                me.pickerVisible = false;
+                                if (me.parent) {
+                                    me.parent.changeSelection(me);
+                                }
+                            }
+                        });
+                    } else {
+                        me.renderPicker(me);
+                        
+                        me.$el.find(".btn-primary").click(function(e) {
                             if (me.parent) {
                                 me.parent.changeSelection(me);
                             }
-                        }
-                    });
+                        });
+                    }
                     
                     this.initialized = true;
                 }
             }
             
             return this;
+        },
+        
+        renderPicker : function(me) {
+            // build the date pickers (using classes instead of id to select the pickers as this is a bug in datePicker)
+            var p1 = me.$el.find(".startDatePicker");
+            p1.datepicker({
+                    changeMonth: true,
+                    changeYear: true,
+                    defaultDate: me.startDate,
+                    onSelect : function(date) {
+                        me.startDate = new Date(Date.parse(date));
+                    }
+                });
+            var p2 = me.$el.find(".endDatePicker");
+            p2.datepicker({
+                    changeMonth: true,
+                    changeYear: true,
+                    defaultDate: me.endDate,
+                    onSelect : function(date) {
+                        me.endDate = new Date(Date.parse(date));
+                    }
+                });
+            
+            me.$el.find("#pickerContainer").show();
         },
 
         setEnable: function(enable) {
