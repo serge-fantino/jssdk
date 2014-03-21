@@ -13,7 +13,8 @@ require = {
         'Handlebars' : 'Handlebars',
         underscore: jssdk+'/js/underscore-min',
         backbone: jssdk+'/js/backbone.1.1.0-min',
-        d3 : jssdk+"/js/d3.v3.min"
+        d3 : jssdk+"/js/d3.v3.min",
+        "bootstrap": jssdk+"/js/bootstrap.min"
     },
     shim: {
         'backbone': {
@@ -22,6 +23,9 @@ require = {
         },
         'underscore': {
             exports: '_'
+        },
+        "bootstrap": {
+            deps: ["jquery"]
         }
     },
     hbs: {

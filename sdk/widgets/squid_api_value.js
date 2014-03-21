@@ -1,14 +1,20 @@
-define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_metric_value', 'd3'], function(Backbone, template) {
+define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_metric_value'], function(Backbone, template) {
 
     var View = Backbone.View.extend({
         
         viewInitialized : false,
+        
+        format : null,
 
         initialize: function(options) {
             if (this.model) {
                 this.model.on('change:value', this.render, this);
             }
-            this.options = options;
+            if (options.format) {
+                this.format = options.format;
+            } else {
+                this.format = function(val){return val;};
+            }
         },
 
         setModel: function(model) {
@@ -26,25 +32,25 @@ define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_metric_value', 'd3'], fun
 			var errorData = this.model.get("error");
 			if (errorData) {
 			    this.$el.find(".sq-error").show();
-			    this.$el.find(".content").hide();
+			    this.$el.find(".sq-content").hide();
 				this.$el.find(".sq-wait").hide();
 			} else {
     			var jsonData = this.model.toJSON();
     			if (jsonData) {
     				var val = jsonData.value;
-    				if (this.options.format) {
-                        var f = d3.format(this.options.format);
-                        val = f(val);
+    				// apply formatting
+                    if (this.format) {
+                        val = this.format(val);
                     }
                     var content = {"label" : jsonData.label, "value" : val};
                     var html = template(content);
 			        this.$el.html(html);
                     
-    			    this.$el.find(".content").show();
+    			    this.$el.find(".sq-content").show();
     				this.$el.find(".sq-wait").hide();
     				this.$el.find(".sq-error").hide();
     			} else {
-    				this.$el.find(".content").hide();
+    				this.$el.find(".sq-content").hide();
     				this.$el.find(".sq-wait").show();
     				this.$el.find(".sq-error").hide();
     			}
