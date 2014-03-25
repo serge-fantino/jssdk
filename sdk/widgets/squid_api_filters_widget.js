@@ -5,6 +5,7 @@ define(['backbone',
 function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate) {
     
     var View = Backbone.View.extend({
+        initialModel: null,
         childViews: null,
         filterIds: null,
         displayCategorical: true,
@@ -14,23 +15,19 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
         categoricalFilterTemplate : null,
         pickerAlwaysVisible : false,
         
-        categoricalFilterModel: Backbone.Model.extend({
+        filterModel: Backbone.Model.extend({
             facetId: null,
             dimension: null,
             domain: null,
             items: null,
             selectedItems: null
         }),
-        continuousFilterModel: Backbone.Model.extend({
-            facetId: null,
-            dimension: null,
-            domain: null,
-            items: null,
-            selectedItems: null
-        }),
-
+        
         initialize: function(options) {
             if (this.model) {
+                if (this.initialModel == null) {
+                    this.initialModel = this.model;
+                }
                 // listen for some model events
                 this.model.on('change:selection', this.render, this);
                 this.model.on('change:error', this.render, this);
@@ -127,7 +124,13 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                         for (var i = 0; i < this.childViews.length; i++) {
                             var view = this.childViews[i];
                             if (view) {
-                                var facet = facets[i];
+                                var facetId = view.model.get("facetId");
+                                var facet;
+                                for (var j=0; j<facets.length; j++) {
+                                    if (facets[j].id == facetId) {
+                                        facet = facets[j];
+                                    }
+                                }
                                 view.model.set({
                                     facetId: facet.id,
                                     dimension: facet.dimension,
@@ -168,7 +171,7 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                                     if (this.displayContinuous) {
                                         container.append("<div id='"+facetContainerId+"'></div>");
                                         filterEl = this.$el.find("#"+facetContainerId);
-                                        model = new this.continuousFilterModel();
+                                        model = new this.filterModel();
                                         view = new ContinuousFilterView({
                                             model: model,
                                             el: filterEl,
@@ -183,7 +186,7 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                                     if (this.displayCategorical) {
                                         container.append("<div id='"+facetContainerId+"'></div>");
                                         filterEl = this.$el.find("#"+facetContainerId);
-                                        model = new this.categoricalFilterModel();
+                                        model = new this.filterModel();
                                         view = new CategoricalFilterView({
                                             model: model,
                                             el: filterEl
@@ -213,6 +216,26 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                 }
 			}
             return this;
+        },
+        
+        hasChanged : function() {
+            var facets = this.model.get("selection");
+            for (var i=0; i<facets.length; i++) {
+                var dimId = facets[i].dimension.id.dimensionId;
+                var initItems = getSelectedItems(this.intialModel, dimId);
+                // check this is the same selection
+            }
+        },
+        
+        getSelectedItems : function(model, dimensionId) {
+            var facets = model.get("selection");
+            for (var i=0; i<facets.length; i++) {
+                var dimId = facets[i].dimension.id.dimensionId;
+                if (dimId == dimensionId) {
+                    return facets[i].selectedItems;
+                }
+            }
+            return null;
         }
 
 
