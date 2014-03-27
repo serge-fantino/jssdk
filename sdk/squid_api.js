@@ -68,21 +68,6 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
                     }
                 }
                 return c;
-            },
-
-            buildSelection: function(selection) {
-                var facets = [];
-                if (selection) {
-                    if (selection.facets) {
-                        facets = selection.facets;
-                    } else {
-                        // for backward compatibility
-                        facets = selection;
-                    }
-                }
-                return {
-                    facets: facets
-                };
             }
         },
 
