@@ -17,7 +17,7 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
     
             var userSelection;
             if (filters) {
-                userSelection = squid_api.utils.buildSelection(filters.get("selection"));
+                userSelection = filters.get("selection");
             } else {
                 userSelection =  analysisModel.get("selection");
             }

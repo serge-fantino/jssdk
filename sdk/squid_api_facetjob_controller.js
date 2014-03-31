@@ -15,7 +15,7 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
 
             var userSelection = null;
             if (filtersModel.get("selection")) {
-                userSelection = squid_api.utils.buildSelection(filtersModel.get("selection"));
+                userSelection = filtersModel.get("selection");
             }
             filtersModel.set("selection", null);
             facetJob.set("selection", userSelection);
@@ -29,7 +29,7 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                 facetJobResult.on("change", function(event) {
                     var facets = event.get("facets");
                     // update the filters Model
-                    filtersModel.set("selection", facets);
+                    filtersModel.set("selection", {"facets" : facets});
                     filtersModel.set("readyStatus", true);
                 }, this);
 

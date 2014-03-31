@@ -82,8 +82,9 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
             var selectedItems = childView.getSelectedItems();
             
             // pick the right facet to update
-            var facets = this.model.get("selection");
-            if (facets) {
+            var sel = this.model.get("selection");
+            if (sel) {
+                var facets = sel.facets;
                 for (var i=0; i< facets.length; i++) {
                     var facet = facets[i];
                     if (facet && (facet.id == childView.model.get("facetId"))) {
@@ -114,10 +115,11 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
 			} else {
 			    this.$el.find(".sq-error").hide();
                 var enabled = this.model.get("enabled");
-                var facets = this.model.get("selection");
-                if (!facets) {
+                var sel = this.model.get("selection");
+                if (!sel) {
                     this.$el.find(".sq-wait").show();
                 } else {
+                    var facets = sel.facets;
                     this.$el.find(".sq-wait").hide();
                     if (this.childViews) {
                         // update the child views models
@@ -228,7 +230,7 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
         },
         
         getSelectedItems : function(model, dimensionId) {
-            var facets = model.get("selection");
+            var facets = model.get("selection").facets;
             for (var i=0; i<facets.length; i++) {
                 var dimId = facets[i].dimension.id.dimensionId;
                 if (dimId == dimensionId) {
