@@ -78,10 +78,13 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
             }
         },
 
+        /**
+         * Called by childViews when a selection occurred.
+         */
         changeSelection: function(childView) {
             var selectedItems = childView.getSelectedItems();
             
-            // pick the right facet to update
+            // update the model
             var sel = this.model.get("selection");
             if (sel) {
                 var facets = sel.facets;
@@ -145,7 +148,8 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                         // sort & filter the facets
                         var sortedFacets = [];
                         for (var i = 0; i < facets.length; i++) {
-                            var facetId = facets[i].dimension.oid;
+                            var facet = facets[i];
+                            var facetId = facet.dimension.oid;
                             if (!this.filterIds) {
                                 // bypass sorting
                                 idx = i;
@@ -156,14 +160,13 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                                     sortedFacets[idx] = facets[i];
                                 }
                             }
-                            if (facet.dimension.type == "CONTINUOUS" && (this.displayContinuous)) {
+                            if ((facet.dimension.type == "CONTINUOUS") && (this.displayContinuous)) {
                                 sortedFacets[idx] = facets[i];
                             }
-                            if (facet.dimension.type == "CATEGORICAL" && (this.displayCategorical)) {
+                            if ((facet.dimension.type == "CATEGORICAL") && (this.displayCategorical)) {
                                 sortedFacets[idx] = facets[i];
                             }
                         }
-                        
                         // build the sub-views
                         this.childViews = [];
                         for (var i = 0; i < sortedFacets.length; i++) {
@@ -173,11 +176,10 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                                 var view = null;
                                 var facetContainerId = "sq-facet_" + i;
                                 var filterEl;
-                                // create a sub view
+                                // create the sub view
                                 container.append("<div id='"+facetContainerId+"'></div>");
                                 filterEl = this.$el.find("#"+facetContainerId);
                                 model = new this.filterModel();
-                                
                                 if (facet.dimension.type == "CONTINUOUS") {
                                         view = new ContinuousFilterView({
                                             model: model,
@@ -187,32 +189,23 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                                         view.setTemplate(this.continuousFilterTemplate);
                                 }
                                 if (facet.dimension.type == "CATEGORICAL") {
-                                    if (this.displayCategorical) {
-                                        container.append("<div id='"+facetContainerId+"'></div>");
-                                        filterEl = this.$el.find("#"+facetContainerId);
                                         model = new this.filterModel();
                                         view = new CategoricalFilterView({
                                             model: model,
                                             el: filterEl
                                         });
                                         view.setTemplate(this.categoricalFilterTemplate);
-                                    } else {
-                                        view = null;
-                                    }
                                 }
-                               
-                                if (view) {
-                                    view.parent = this;
-                                    // set view model
-                                    model.set({
-                                        facetId: facet.id,
-                                        dimension: facet.dimension,
-                                        domain: facet.domain,
-                                        items: facet.items,
-                                        selectedItems: facet.selectedItems
-                                    });
-                                    view.setEnable(enabled);
-                                }
+                                view.parent = this;
+                                // set view model
+                                model.set({
+                                    facetId: facet.id,
+                                    dimension: facet.dimension,
+                                    domain: facet.domain,
+                                    items: facet.items,
+                                    selectedItems: facet.selectedItems
+                                });
+                                view.setEnable(enabled);
                                 this.childViews.push(view);
                             }
                         }
