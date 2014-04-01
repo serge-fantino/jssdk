@@ -69,9 +69,6 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
         },
         
         FiltersModel: Backbone.Model.extend({
-            selection: null,
-            userSelection: null,
-            
             setProjectId : function(projectId) {
                 this.set("id", {
                         "projectId": projectId,

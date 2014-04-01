@@ -386,13 +386,6 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
     squid_api.model.MetricCollection = squid_api.model.BaseCollection.extend({
         model : squid_api.model.MetricModel
     });
-
-    // deprecated 
     
-    squid_api.model.FiltersModel = Backbone.Model.extend({
-        selection: null,
-        userSelection: null
-    });
-
     return squid_api;
 });
