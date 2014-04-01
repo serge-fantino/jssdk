@@ -87,6 +87,37 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                 }
                 this.set("domains", domains);
                 return this;
+            },
+            
+            addSelection : function(dimension,value) {
+                var facets = this.get("selection").facets;
+                // check if the facet already exists
+                var facetToUpdate;
+                for (var i=0;i<facets.length;i++) {
+                    var facet = facets[i];
+                    if (facet.dimension.oid==dimension.id) {
+                        facetToUpdate = facet;
+                    }
+                }
+                if (!facetToUpdate) {
+                    facetToUpdate = {
+                        "dimension" : {
+                            "id" : {
+                                "projectId" : this.get("id").projectId,
+                                "domainId" : this.get("id").domainId,
+                                "dimensionId" : dimension.id
+                            }
+                        },
+                        "selectedItems" : []
+                    };
+                    facets.push(facetToUpdate);
+                }
+                // update the facet
+                facetToUpdate.selectedItems.push({
+                    "type" : "v",
+                    "id" : -1,
+                    "value" : value
+                });
             }
         })
     };
