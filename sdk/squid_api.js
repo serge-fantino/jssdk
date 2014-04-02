@@ -68,21 +68,6 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
                     }
                 }
                 return c;
-            },
-
-            buildSelection: function(selection) {
-                var facets = [];
-                if (selection) {
-                    if (selection.facets) {
-                        facets = selection.facets;
-                    } else {
-                        // for backward compatibility
-                        facets = selection;
-                    }
-                }
-                return {
-                    facets: facets
-                };
             }
         },
 
@@ -401,13 +386,6 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
     squid_api.model.MetricCollection = squid_api.model.BaseCollection.extend({
         model : squid_api.model.MetricModel
     });
-
-    // deprecated 
     
-    squid_api.model.FiltersModel = Backbone.Model.extend({
-        selection: null,
-        userSelection: null
-    });
-
     return squid_api;
 });

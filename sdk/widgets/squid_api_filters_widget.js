@@ -1,11 +1,11 @@
-define(['backbone', 
+define(['backbone',
 'jssdk/sdk/widgets/squid_api_filters_categorical_widget', 
 'jssdk/sdk/widgets/squid_api_filters_continuous_widget',
-'hbs!jssdk/sdk/templates/squid_api_filters_widget'], 
+'hbs!jssdk/sdk/templates/squid_api_filters_widget', 'underscore'], 
 function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate) {
     
     var View = Backbone.View.extend({
-        initialModel: null,
+        initialSelection: null,
         childViews: null,
         filterIds: null,
         displayCategorical: true,
@@ -25,8 +25,8 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
         
         initialize: function(options) {
             if (this.model) {
-                if (this.initialModel == null) {
-                    this.initialModel = this.model;
+                if (this.initialSelection == null) {
+                    this.initialSelection = this.model.get("selection");
                 }
                 // listen for some model events
                 this.model.on('change:selection', this.render, this);
@@ -78,12 +78,15 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
             }
         },
 
+        /**
+         * Called by childViews when a selection occurred.
+         */
         changeSelection: function(childView) {
             var selectedItems = childView.getSelectedItems();
-            
-            // pick the right facet to update
-            var facets = this.model.get("selection");
-            if (facets) {
+            // update the model
+            var sel = this.model.get("selection");
+            if (sel) {
+                var facets = sel.facets;
                 for (var i=0; i< facets.length; i++) {
                     var facet = facets[i];
                     if (facet && (facet.id == childView.model.get("facetId"))) {
@@ -100,9 +103,8 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
         render: function() {
             var container;
             if (!this.$el.html()) {
-                    // first call, setup the child views
-                    this.$el.html(this.template());
-                    
+                // first call, setup the child views
+                this.$el.html(this.template());            
             }
             container = this.$el.find(".sq-content");
             var errorData = this.model.get("error");
@@ -114,10 +116,11 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
 			} else {
 			    this.$el.find(".sq-error").hide();
                 var enabled = this.model.get("enabled");
-                var facets = this.model.get("selection");
-                if (!facets) {
+                var sel = this.model.get("selection");
+                if (!sel) {
                     this.$el.find(".sq-wait").show();
                 } else {
+                    var facets = sel.facets;
                     this.$el.find(".sq-wait").hide();
                     if (this.childViews) {
                         // update the child views models
@@ -141,13 +144,14 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                             }
                         }
                     } else {
-                        // sort the facets
+                        // sort & filter the facets
                         var sortedFacets = [];
                         for (var i = 0; i < facets.length; i++) {
-                            var facetId = facets[i].dimension.oid;
+                            var facet = facets[i];
+                            var facetId = facet.dimension.oid;
                             if (!this.filterIds) {
                                 // bypass sorting
-                                sortedFacets[i] = facets[i];
+                                idx = i;
                             } else {
                                 var idx = this.filterIds.indexOf(facetId);
                                 if (idx >-1) {
@@ -155,8 +159,13 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                                     sortedFacets[idx] = facets[i];
                                 }
                             }
+                            if ((facet.dimension.type == "CONTINUOUS") && (this.displayContinuous)) {
+                                sortedFacets[idx] = facets[i];
+                            }
+                            if ((facet.dimension.type == "CATEGORICAL") && (this.displayCategorical)) {
+                                sortedFacets[idx] = facets[i];
+                            }
                         }
-                        
                         // build the sub-views
                         this.childViews = [];
                         for (var i = 0; i < sortedFacets.length; i++) {
@@ -166,49 +175,36 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                                 var view = null;
                                 var facetContainerId = "sq-facet_" + i;
                                 var filterEl;
-                                // create a sub view (applying display rules)
+                                // create the sub view
+                                container.append("<div id='"+facetContainerId+"'></div>");
+                                filterEl = this.$el.find("#"+facetContainerId);
+                                model = new this.filterModel();
                                 if (facet.dimension.type == "CONTINUOUS") {
-                                    if (this.displayContinuous) {
-                                        container.append("<div id='"+facetContainerId+"'></div>");
-                                        filterEl = this.$el.find("#"+facetContainerId);
-                                        model = new this.filterModel();
                                         view = new ContinuousFilterView({
                                             model: model,
                                             el: filterEl,
                                             pickerVisible : this.pickerAlwaysVisible
                                         });
                                         view.setTemplate(this.continuousFilterTemplate);
-                                    } else {
-                                        view = null;
-                                    }
                                 }
                                 if (facet.dimension.type == "CATEGORICAL") {
-                                    if (this.displayCategorical) {
-                                        container.append("<div id='"+facetContainerId+"'></div>");
-                                        filterEl = this.$el.find("#"+facetContainerId);
                                         model = new this.filterModel();
                                         view = new CategoricalFilterView({
                                             model: model,
                                             el: filterEl
                                         });
                                         view.setTemplate(this.categoricalFilterTemplate);
-                                    } else {
-                                        view = null;
-                                    }
                                 }
-                               
-                                if (view) {
-                                    view.parent = this;
-                                    // set view model
-                                    model.set({
-                                        facetId: facet.id,
-                                        dimension: facet.dimension,
-                                        domain: facet.domain,
-                                        items: facet.items,
-                                        selectedItems: facet.selectedItems
-                                    });
-                                    view.setEnable(enabled);
-                                }
+                                view.parent = this;
+                                // set view model
+                                model.set({
+                                    facetId: facet.id,
+                                    dimension: facet.dimension,
+                                    domain: facet.domain,
+                                    items: facet.items,
+                                    selectedItems: facet.selectedItems
+                                });
+                                view.setEnable(enabled);
                                 this.childViews.push(view);
                             }
                         }
@@ -219,16 +215,38 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
         },
         
         hasChanged : function() {
-            var facets = this.model.get("selection");
-            for (var i=0; i<facets.length; i++) {
-                var dimId = facets[i].dimension.id.dimensionId;
-                var initItems = getSelectedItems(this.intialModel, dimId);
-                // check this is the same selection
+            var isEqual = true;
+            if (this.model.get("selection")) {
+                var facets = this.model.get("selection").facets;
+                for (var i=0; i<facets.length; i++) {
+                    var dimId = facets[i].dimension.id.dimensionId;
+                    var initItems = this.getSelectedItems(this.initialSelection, dimId);
+                    var curItems = facets[i].selectedItems;
+                    if (initItems == null) {
+                        initItems = [];
+                    }
+                    initItems.sort();
+                    if (curItems == null) {
+                        curItems = [];
+                    }
+                    curItems.sort();
+                    // check this is the same selection
+                    if (curItems.length != initItems.length) {
+                        isEqual = false;
+                    } else {
+                        for (var j=0; j<initItems.length; j++) {
+                            if (initItems[j].id != curItems[j].id) {
+                                isEqual = false;
+                            }
+                        }
+                    }
+                }
             }
+            return !isEqual;
         },
         
-        getSelectedItems : function(model, dimensionId) {
-            var facets = model.get("selection");
+        getSelectedItems : function(selection, dimensionId) {
+            var facets = selection.facets;
             for (var i=0; i<facets.length; i++) {
                 var dimId = facets[i].dimension.id.dimensionId;
                 if (dimId == dimensionId) {
