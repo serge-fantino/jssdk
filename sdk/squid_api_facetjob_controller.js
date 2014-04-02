@@ -95,7 +95,7 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                 var facetToUpdate;
                 for (var i=0;i<facets.length;i++) {
                     var facet = facets[i];
-                    if (facet.dimension.oid==dimension.id) {
+                    if (facet.dimension.oid==dimension.id.dimensionId) {
                         facetToUpdate = facet;
                     }
                 }
@@ -104,8 +104,8 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                         "dimension" : {
                             "id" : {
                                 "projectId" : this.get("id").projectId,
-                                "domainId" : this.get("id").domainId,
-                                "dimensionId" : dimension.id
+                                "domainId" : dimension.id.domainId,
+                                "dimensionId" : dimension.id.dimensionId
                             }
                         },
                         "selectedItems" : []
