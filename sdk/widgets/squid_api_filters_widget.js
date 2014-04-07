@@ -106,7 +106,14 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 }
             }
             // recompute the facets
-            // FacetJobController.computeFacets(this.currentModel);
+            var filters = new FacetJobController.FiltersModel();
+            filters.set(this.currentModel);
+            filters.on('change:selection', function() {
+                // update the current model
+                this.currentModel = $.extend(true, {}, filters.attributes);
+                this.render();
+                }, this);
+            FacetJobController.computeFacets(filters);
             
         },
         
