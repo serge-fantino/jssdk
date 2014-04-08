@@ -1,11 +1,13 @@
-define(['backbone',
+define(['jquery','backbone',
 'jssdk/sdk/widgets/squid_api_filters_categorical_widget', 
 'jssdk/sdk/widgets/squid_api_filters_continuous_widget',
+'jssdk/sdk/squid_api_facetjob_controller',
 'hbs!jssdk/sdk/templates/squid_api_filters_widget', 'underscore'], 
-function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate) {
+function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobController, defaultTemplate) {
     
     var View = Backbone.View.extend({
-        initialSelection: null,
+        initialModel: null,
+        currentModel: null,
         childViews: null,
         filterIds: null,
         displayCategorical: true,
@@ -25,11 +27,22 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
         
         initialize: function(options) {
             if (this.model) {
+                var me = this;
                 if (this.initialSelection == null) {
-                    this.initialSelection = this.model.get("selection");
+                    // duplicate the initial model (once)
+                    this.initialModel = $.extend(true, {}, this.model.attributes);
                 }
+                // set the current model
+                this.currentModel = new FacetJobController.FiltersModel();
+                this.currentModel.set($.extend(true, {}, this.model.attributes));
+                this.currentModel.on('change:selection', function() {
+                    me.render();
+                    }, this);
                 // listen for some model events
-                this.model.on('change:selection', this.render, this);
+                this.model.on('change:selection', function() {
+                    // update the current model
+                    me.currentModel.set($.extend(true, {}, me.model.attributes));
+                    }, this);
                 this.model.on('change:error', this.render, this);
                 this.model.on('change:enabled', this.setEnable, this);
             }
@@ -83,8 +96,8 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
          */
         changeSelection: function(childView) {
             var selectedItems = childView.getSelectedItems();
-            // update the model
-            var sel = this.model.get("selection");
+            // update the current model
+            var sel = this.currentModel.get("selection");
             if (sel) {
                 var facets = sel.facets;
                 for (var i=0; i< facets.length; i++) {
@@ -95,9 +108,22 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                         }
                     }
                 }
-                // notify observers manually since we only updated a facet
-                this.model.trigger("change:userSelection", this.model);
             }
+            // recompute the current facets
+            FacetJobController.computeFacets(this.currentModel);
+            
+        },
+        
+        applySelection: function() {
+            // update the model with current one
+            this.model.set(this.currentModel.attributes, {"silent" : true});
+            this.model.trigger("change:userSelection", this.model);
+        },
+        
+        cancelSelection: function() {
+            // update the current model with the original model
+            this.currentModel.set($.extend(true, {}, this.model.attributes));
+            this.render();
         },
 
         render: function() {
@@ -116,7 +142,7 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
 			} else {
 			    this.$el.find(".sq-error").hide();
                 var enabled = this.model.get("enabled");
-                var sel = this.model.get("selection");
+                var sel = this.currentModel.get("selection");
                 if (!sel) {
                     this.$el.find(".sq-wait").show();
                 } else {
@@ -141,6 +167,7 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
                                     items: facet.items,
                                     selectedItems: facet.selectedItems
                                 });
+                                view.model.trigger("change", null);
                             }
                         }
                     } else {
@@ -213,11 +240,12 @@ function(Backbone, CategoricalFilterView, ContinuousFilterView, defaultTemplate)
 			}
             return this;
         },
-        
+
         hasChanged : function() {
             var isEqual = true;
-            if (this.model.get("selection")) {
-                var facets = this.model.get("selection").facets;
+            if (this.currentModel.get("selection")) {
+                var facets = this.currentModel.get("selection").facets;
+                var initSelection = this.initialModel.selection;
                 for (var i=0; i<facets.length; i++) {
                     var dimId = facets[i].dimension.id.dimensionId;
                     var initItems = this.getSelectedItems(this.initialSelection, dimId);

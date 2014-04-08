@@ -72,11 +72,17 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                     this.endDate = new Date(Date.parse(endDateStr));
                 }
                 if (this.initialized) {
+                    // just update the pickers dates
                     this.$el.find("#startDate").text(this.startDate.toDateString());
+                    var p1 = this.$el.find(".startDatePicker");
+                    p1.datepicker("setDate",new Date(Date.parse(this.startDate)));
+                    
                     this.$el.find("#endDate").text(this.endDate.toDateString());
+                    var p2 = this.$el.find(".endDatePicker");
+                    p2.datepicker("setDate",new Date(Date.parse(this.endDate)));
                 } else {
+                    // build the date pickers
                     var selHTML = "";
-                    // get HTML template and fill corresponding data
                     selHTML = this.template({
                         dateAvailable: dateAvailable,
                         facetId: facetId,
@@ -86,13 +92,11 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                     });
             
                     // render HTML
-                    
                     this.$el.html(selHTML);
                     
-                    // attach observers
                     var me = this;
-                    
                     if (!me.pickerAlwaysVisible) {
+                        // attach observers
                         me.$el.click(function(e) {
                         	// on click, show the date pickers
                             e.stopPropagation();
@@ -131,13 +135,8 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                             }
                         });
                     } else {
+                        // just render
                         me.renderPicker(me);
-                        
-                        me.$el.find(".btn-primary").click(function(e) {
-                            if (me.parent) {
-                                me.parent.changeSelection(me);
-                            }
-                        });
                     }
                     
                     this.initialized = true;
@@ -156,6 +155,9 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                     defaultDate: me.startDate,
                     onSelect : function(date) {
                         me.startDate = new Date(Date.parse(date));
+                        if (me.parent) {
+                            me.parent.changeSelection(me);
+                        }
                     }
                 });
             var p2 = me.$el.find(".endDatePicker");
@@ -165,6 +167,9 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                     defaultDate: me.endDate,
                     onSelect : function(date) {
                         me.endDate = new Date(Date.parse(date));
+                        if (me.parent) {
+                            me.parent.changeSelection(me);
+                        }
                     }
                 });
             
