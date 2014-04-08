@@ -27,17 +27,21 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
         
         initialize: function(options) {
             if (this.model) {
+                var me = this;
                 if (this.initialSelection == null) {
                     // duplicate the initial model (once)
                     this.initialModel = $.extend(true, {}, this.model.attributes);
                 }
                 // set the current model
-                this.currentModel = $.extend(true, {}, this.model.attributes);
+                this.currentModel = new FacetJobController.FiltersModel();
+                this.currentModel.set($.extend(true, {}, this.model.attributes));
+                this.currentModel.on('change:selection', function() {
+                    me.render();
+                    }, this);
                 // listen for some model events
                 this.model.on('change:selection', function() {
                     // update the current model
-                    this.currentModel = $.extend(true, {}, this.model.attributes);
-                    this.render();
+                    me.currentModel.set($.extend(true, {}, me.model.attributes));
                     }, this);
                 this.model.on('change:error', this.render, this);
                 this.model.on('change:enabled', this.setEnable, this);
@@ -93,7 +97,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
         changeSelection: function(childView) {
             var selectedItems = childView.getSelectedItems();
             // update the current model
-            var sel = this.currentModel.selection;
+            var sel = this.currentModel.get("selection");
             if (sel) {
                 var facets = sel.facets;
                 for (var i=0; i< facets.length; i++) {
@@ -105,27 +109,20 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                     }
                 }
             }
-            // recompute the facets
-            var filters = new FacetJobController.FiltersModel();
-            filters.set(this.currentModel);
-            filters.on('change:selection', function() {
-                // update the current model
-                this.currentModel = $.extend(true, {}, filters.attributes);
-                this.render();
-                }, this);
-            FacetJobController.computeFacets(filters);
+            // recompute the current facets
+            FacetJobController.computeFacets(this.currentModel);
             
         },
         
         applySelection: function() {
             // update the model with current one
-            this.model.set(this.currentModel, {"silent" : true});
+            this.model.set(this.currentModel.attributes, {"silent" : true});
             this.model.trigger("change:userSelection", this.model);
         },
         
         cancelSelection: function() {
             // update the current model with the original model
-            this.currentModel = $.extend(true, {}, this.model.attributes);
+            this.currentModel.set($.extend(true, {}, this.model.attributes));
             this.render();
         },
 
@@ -145,7 +142,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
 			} else {
 			    this.$el.find(".sq-error").hide();
                 var enabled = this.model.get("enabled");
-                var sel = this.currentModel.selection;
+                var sel = this.currentModel.get("selection");
                 if (!sel) {
                     this.$el.find(".sq-wait").show();
                 } else {
@@ -246,8 +243,8 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
 
         hasChanged : function() {
             var isEqual = true;
-            if (this.currentModel.selection) {
-                var facets = this.currentModel.selection.facets;
+            if (this.currentModel.get("selection")) {
+                var facets = this.currentModel.get("selection").facets;
                 var initSelection = this.initialModel.selection;
                 for (var i=0; i<facets.length; i++) {
                     var dimId = facets[i].dimension.id.dimensionId;
