@@ -16,6 +16,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
         continuousFilterTemplate : null,
         categoricalFilterTemplate : null,
         pickerAlwaysVisible : false,
+        booleanGroupName : null,
         
         filterModel: Backbone.Model.extend({
             facetId: null,
@@ -48,6 +49,9 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
             }
             if (options.pickerVisible && (options.pickerVisible == true)) {
                 this.pickerAlwaysVisible = true;
+            }
+            if (options.booleanGroupName) {
+                this.booleanGroupName = options.booleanGroupName;
             }
             if (options.template) {
                 this.template = options.template;
@@ -96,16 +100,35 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
          */
         changeSelection: function(childView) {
             var selectedItems = childView.getSelectedItems();
+            var facetId = childView.model.get("facetId");
             // update the current model
             var sel = this.currentModel.get("selection");
             if (sel) {
                 var facets = sel.facets;
                 for (var i=0; i< facets.length; i++) {
                     var facet = facets[i];
-                    if (facet && (facet.id == childView.model.get("facetId"))) {
-                        if ((facet.items.length > 0)) {
-                            facet.selectedItems = selectedItems;
-                        }
+                    if (facetId != null) {
+                    	// normal facet
+	                    if (facet && (facet.id == facetId)) {
+	                        if ((facet.items.length > 0)) {
+	                            facet.selectedItems = selectedItems;
+	                        }
+	                    }
+                    } else {
+                    	// boolean group facet
+                    	if (selectedItems.length == 0) {
+                    		// clear selection
+                    		if (facet && ((facet.items.length == 1) && (facet.items[0].value == "true"))) {
+                    			facet.selectedItems = [];
+                    		}
+                    	} else {
+                    		// set the selection
+	                    	for (var j=0; j<selectedItems.length; j++) {
+	                    		if (facet && (facet.dimension.oid == selectedItems[j].id)) {
+	                    			facet.selectedItems = [{"type" : "v", "id" : "0", "value" : "true"}];
+	                    		}
+	                    	}
+                    	}
                     }
                 }
             }
@@ -148,44 +171,39 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 } else {
                     var facets = sel.facets;
                     this.$el.find(".sq-wait").hide();
-                    if (this.childViews) {
-                        // update the child views models
-                        for (var i = 0; i < this.childViews.length; i++) {
-                            var view = this.childViews[i];
-                            if (view) {
-                                var facetId = view.model.get("facetId");
-                                var facet;
-                                for (var j=0; j<facets.length; j++) {
-                                    if (facets[j].id == facetId) {
-                                        facet = facets[j];
-                                    }
-                                }
-                                view.model.set({
-                                    facetId: facet.id,
-                                    dimension: facet.dimension,
-                                    domain: facet.domain,
-                                    items: facet.items,
-                                    selectedItems: facet.selectedItems
-                                });
-                                view.model.trigger("change", null);
+                    
+                    // sort & filter the facets
+                    var sortedFacets = [];
+                    var booleanGroupFacet = {"dimension" : {"type" : "CATEGORICAL", "oid" : null, "id" : null, "name" : this.booleanGroupName }, "items" : [], "selectedItems" : []};
+                    for (var i = 0; i < facets.length; i++) {
+                        var facet = facets[i];
+                        var facetId = facet.dimension.oid;
+                        var idx;
+                        if (!this.filterIds) {
+                            // bypass sorting
+                            idx = i;
+                        } else {
+                        	// apply sorting
+                            idx = this.filterIds.indexOf(facetId);
+                            if (idx < 0) {
+                                // ignore this facet
+                            	idx = null;
                             }
                         }
-                    } else {
-                        // sort & filter the facets
-                        var sortedFacets = [];
-                        for (var i = 0; i < facets.length; i++) {
-                            var facet = facets[i];
-                            var facetId = facet.dimension.oid;
-                            if (!this.filterIds) {
-                                // bypass sorting
-                                idx = i;
-                            } else {
-                                var idx = this.filterIds.indexOf(facetId);
-                                if (idx >-1) {
-                                    // apply sorting
-                                    sortedFacets[idx] = facets[i];
-                                }
-                            }
+                        // apply group boolean rule
+                        if (this.booleanGroupName) {
+                        	if ((facet.items.length == 1) && (facet.items[0].value == "true")) {
+                        		idx = null;
+                        		// add a new item to the boolean group
+                        		booleanGroupFacet.items.push({"type" : "v", "id" : facet.dimension.oid, "value" : facet.dimension.name});
+                        		if (facet.selectedItems.length > 0) {
+                        			// this facet is selected
+                        			booleanGroupFacet.selectedItems = [{"type" : "v", "id" : facet.dimension.oid, "value" : facet.dimension.name}];
+                        		}
+                        	}
+                        }
+                        // apply display rules
+                        if (idx != null) {
                             if ((facet.dimension.type == "CONTINUOUS") && (this.displayContinuous)) {
                                 sortedFacets[idx] = facets[i];
                             }
@@ -193,12 +211,25 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                                 sortedFacets[idx] = facets[i];
                             }
                         }
-                        // build the sub-views
-                        this.childViews = [];
-                        for (var i = 0; i < sortedFacets.length; i++) {
-                            var facet = sortedFacets[i];
-                            if (facet) {
-                                var model = null;
+                    }
+                    if (this.booleanGroupName) {
+                    	sortedFacets.push(booleanGroupFacet);
+                    }
+                    
+                    var buildViews = false;
+                    if (!this.childViews) {
+                    	// build new views
+                    	this.childViews = [];
+                    	buildViews = true;
+                    }
+                    
+                    var viewIdx = 0;
+                    for (var i = 0; i < sortedFacets.length; i++) {
+                        var facet = sortedFacets[i];
+                        if (facet) {
+                            var model = null;
+                            if (buildViews) {
+                                // build the sub-views
                                 var view = null;
                                 var facetContainerId = "sq-facet_" + i;
                                 var filterEl;
@@ -223,17 +254,19 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                                         view.setTemplate(this.categoricalFilterTemplate);
                                 }
                                 view.parent = this;
-                                // set view model
-                                model.set({
-                                    facetId: facet.id,
-                                    dimension: facet.dimension,
-                                    domain: facet.domain,
-                                    items: facet.items,
-                                    selectedItems: facet.selectedItems
-                                });
                                 view.setEnable(enabled);
                                 this.childViews.push(view);
+                            } else {
+                            	model = this.childViews[viewIdx].model;
+                                viewIdx++;
                             }
+                            // set view model
+                            model.set({
+                                facetId: facet.id,
+                                dimension: facet.dimension,
+                                items: facet.items,
+                                selectedItems: facet.selectedItems
+                            });
                         }
                     }
                 }
