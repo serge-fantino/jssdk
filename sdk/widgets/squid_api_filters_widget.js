@@ -210,6 +210,13 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                         }
                     }
                     if (this.booleanGroupName) {
+                    	// sort by alphabetical order
+                    	booleanGroupFacet.items.sort(function(a,b) { 
+	                    		if (a.value < b.value) return -1;
+	                    	    if (a.value > b.value) return 1;
+	                    	    return 0;
+                    		} 
+                    	);
                     	sortedFacets.push(booleanGroupFacet);
                     }
                     
