@@ -116,18 +116,15 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
 	                    }
                     } else {
                     	// boolean group facet
-                    	if (selectedItems.length == 0) {
-                    		// clear selection
-                    		if (facet && ((facet.items.length == 1) && (facet.items[0].value == "true"))) {
-                    			facet.selectedItems = [];
+                    	// clear selection
+                		if (facet && ((facet.items.length == 1) && (facet.items[0].value == "true"))) {
+                			facet.selectedItems = [];
+                		}
+                		// set the selection
+                    	for (var j=0; j<selectedItems.length; j++) {
+                    		if (facet && (facet.dimension.oid == selectedItems[j].id)) {
+                    			facet.selectedItems = [{"type" : "v", "id" : "0", "value" : "true"}];
                     		}
-                    	} else {
-                    		// set the selection
-	                    	for (var j=0; j<selectedItems.length; j++) {
-	                    		if (facet && (facet.dimension.oid == selectedItems[j].id)) {
-	                    			facet.selectedItems = [{"type" : "v", "id" : "0", "value" : "true"}];
-	                    		}
-	                    	}
                     	}
                     }
                 }
