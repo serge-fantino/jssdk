@@ -38,6 +38,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 this.currentModel.set($.extend(true, {}, this.model.attributes));
                 this.currentModel.on('change:selection', function() {
                     me.render();
+                    this.setEnable();
                     }, this);
                 // listen for some model events
                 this.model.on('change:selection', function() {
@@ -83,8 +84,10 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
             return this;
         },
 
-        setEnable: function() {
-            var enabled = this.model.get("enabled");
+        setEnable: function(enabled) {
+        	if (typeof(enabled) == 'undefined') {
+            	enabled = this.model.get("enabled");
+        	}
             if (this.childViews) {
                 for (var i = 0; i < this.childViews.length; i++) {
                     var view = this.childViews[i];
@@ -130,6 +133,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 }
             }
             // recompute the current facets
+            this.setEnable(false);
             FacetJobController.computeFacets(this.currentModel);
             
         },
