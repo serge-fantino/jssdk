@@ -38,7 +38,12 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 this.currentModel.set($.extend(true, {}, this.model.attributes));
                 this.currentModel.on('change:selection', function() {
                     me.render();
-                    this.setEnable();
+                    if (me.currentModel.get("selection")) {
+                    	me.currentModel.set("enabled",true);
+                    }
+                    }, this);
+                this.currentModel.on('change:enabled', function() {
+                	me.setEnable(me.currentModel.get("enabled"));
                     }, this);
                 // listen for some model events
                 this.model.on('change:selection', function() {
@@ -133,21 +138,25 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 }
             }
             // recompute the current facets
-            this.setEnable(false);
+            this.currentModel.set("enabled",false);
             FacetJobController.computeFacets(this.currentModel);
             
         },
         
         applySelection: function() {
-            // update the model with current one
-            this.model.set(this.currentModel.attributes, {"silent" : true});
-            this.model.trigger("change:userSelection", this.model);
+        	if (this.currentModel.get("enabled") == true) {
+	            // update the model with current one
+	            this.model.set(this.currentModel.attributes, {"silent" : true});
+	            this.model.trigger("change:userSelection", this.model);
+        	}
         },
         
         cancelSelection: function() {
-            // update the current model with the original model
-            this.currentModel.set($.extend(true, {}, this.model.attributes));
-            this.render();
+        	if (this.currentModel.get("enabled") == true) {
+	            // update the current model with the original model
+	            this.currentModel.set($.extend(true, {}, this.model.attributes));
+	            this.render();
+        	}
         },
 
         render: function() {
