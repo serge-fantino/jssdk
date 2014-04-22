@@ -114,7 +114,13 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
         },
         url: function() {
             var url = this.urlRoot();
-            url = this.addParam(url, "timeout",squid_api.timeoutMillis);
+            if (typeof this.timeoutMillis === 'undefined' ) {
+            	url = this.addParam(url, "timeout",squid_api.timeoutMillis);
+            } else {
+            	if (this.timeoutMillis != null) {
+            		url = this.addParam(url, "timeout",this.timeoutMillis());
+            	}
+            }
             url = this.addParam(url, "access_token",squid_api.model.login.get("accessToken"));
             return url;
         },

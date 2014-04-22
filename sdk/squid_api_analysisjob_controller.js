@@ -42,19 +42,23 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
 
             // save the analysisJob to API
             analysisJob.save({}, {
-                error: function(model, error) {
-                    squid_api.model.error.set("errorMessage", error);
+                error: function(model, response) {
+                	console.log("createAnalysis error");
+                    squid_api.model.error.set("errorMessage", response);
+                    analysisModel.set("status", model.get("status"));
+                    analysisModel.set("error", model.get("error"));
+                    analysisModel.set("results", model.get("results"));
                     analysisModel.set({"readyStatus": true});
-                    analysisModel.set("error", {message : error.statusText});
+                    analysisModel.set("jobId", model.get("id"));
                 },
-                success : function() {
-                    console.log("createAnalysis save");
-                    analysisModel.set({
-                        jobId: analysisJob.get("id"),
-                        readyStatus: true,
-                        results: null,
-                        error : analysisJob.get("error")
-                    });
+                success : function(model, response) {
+                    console.log("createAnalysis success");
+                    squid_api.model.error.set("errorMessage", null);
+                    analysisModel.set("status", model.get("status"));
+                    analysisModel.set("error", model.get("error"));
+                    analysisModel.set("results", model.get("results"));
+                    analysisModel.set({"readyStatus": true});
+                    analysisModel.set("jobId", model.get("id"));
                 }
             });
             if (this.fakeServer) {
@@ -108,7 +112,7 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
          * retrieve the results.
          */
         getAnalysisJobResults: function(analysisModel, filters) {
-            if ((analysisModel.get("readyStatus") === true) && (analysisModel.get("jobId"))) {
+        	if (analysisModel.get("status") != "DONE") {
                 console.log("getAnalysisJobResults");
                 var analysisJobResult = new controller.ProjectAnalysisJobResult();
                 analysisJobResult.set("id", analysisModel.get("jobId"));
@@ -137,9 +141,7 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                 if (this.fakeServer) {
                     this.fakeServer.respond();
                 }
-
             }
-
         },
 
         AnalysisModel: Backbone.Model.extend({
