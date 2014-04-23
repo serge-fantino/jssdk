@@ -21,38 +21,48 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
             facetJob.set("selection", userSelection);
             facetJob.set("error", null);
             facetJob.on("change:id", function(event) {
-
-                // fetch the job results
-                var facetJobResult = new controller.ProjectFacetJobResult();
-                facetJobResult.set("id", event.id);
-
-                facetJobResult.on("change", function(event) {
-                    var facets = event.get("facets");
-                    // update the filters Model
-                    filtersModel.set("selection", {"facets" : facets});
-                    filtersModel.set("readyStatus", true);
-                }, this);
-
-                if (facetJob.get("error") === null) {
-                    // get the results from API
-                    facetJobResult.fetch({
-                        error: function(model, error) {
-                            squid_api.model.error.set("errorMessage", error);
-                            filtersModel.set("readyStatus", true);
-                            filtersModel.set("error", {message : error.statusText});
-                        },
-                        success: function() {
-                            squid_api.model.error.set("errorMessage", null);
-                        }
-                    });
-                    if (this.fakeServer) {
-                        this.fakeServer.respond();
-                    }
-                }
-                else {
-                    // in case of error init the models
-                    filtersModel.set("error", event.get("error"));
-                }
+            	if (event.get("status") == "DONE") {
+	            	if (!event.get("error")) {
+	            		// update the filters Model
+	            		var facets = event.get("results").facets;
+	                    filtersModel.set("selection", {"facets" : facets});
+	                    filtersModel.set("readyStatus", true);
+	            	} else {
+	            		filtersModel.set("error", event.get("error"));
+	            	}
+            	} else {
+	                // fetch the job results
+	                var facetJobResult = new controller.ProjectFacetJobResult();
+	                facetJobResult.set("id", event.id);
+	
+	                facetJobResult.on("change", function(event) {
+	                    var facets = event.get("facets");
+	                    // update the filters Model
+	                    filtersModel.set("selection", {"facets" : facets});
+	                    filtersModel.set("readyStatus", true);
+	                }, this);
+	
+	                if (facetJob.get("error") === null) {
+	                    // get the results from API
+	                    facetJobResult.fetch({
+	                        error: function(model, error) {
+	                            squid_api.model.error.set("errorMessage", error);
+	                            filtersModel.set("readyStatus", true);
+	                            filtersModel.set("error", {message : error.statusText});
+	                        },
+	                        success: function() {
+	                            squid_api.model.error.set("errorMessage", null);
+	                        }
+	                    });
+	                    if (this.fakeServer) {
+	                        this.fakeServer.respond();
+	                    }
+	                }
+	                else {
+	                    // in case of error init the models
+	                    filtersModel.set("error", event.get("error"));
+	                }
+            	}
             }, this);
 
             // save the facetJob to API
@@ -127,14 +137,20 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
             return squid_api.model.ProjectModel.prototype.urlRoot.apply(this, arguments) + "/facetjobs/" + (this.id.facetJobId === null ? "" : this.id.facetJobId);
         },
         error: null,
-        domains: null
+        domains: null,
+        timeoutMillis: function() { 
+        	return squid_api.timeoutMillis; 
+        }
     });
 
     controller.ProjectFacetJobResult = controller.ProjectFacetJob.extend({
         urlRoot: function() {
             return controller.ProjectFacetJob.prototype.urlRoot.apply(this, arguments) + "/results";
         },
-        error: null
+        error: null,
+        timeoutMillis: function() { 
+        	return squid_api.timeoutMillis; 
+        }
     });
         
     return controller;
