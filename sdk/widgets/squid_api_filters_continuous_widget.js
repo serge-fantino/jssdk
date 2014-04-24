@@ -1,3 +1,7 @@
+/*
+ * A DatePicker widget.
+ * Uses http://jqueryui.com/datepicker/
+ */
 define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuous_widget',
 'jqueryui'], function($, Backbone, template) {
 
@@ -6,6 +10,8 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
         enable: true,
         startDate: null,
         endDate: null,
+        minDate: null,
+        maxDate: null,
         model: null,
         initialized : false,
         pickerVisible : false,
@@ -54,32 +60,40 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
                 var facetId = this.model.get('facetId');
 
                 var dateAvailable = false;
-                var startDateStr;
-                var endDateStr;
                 if (items && items.length > 0) {
+                	// compute min and max dates
+                	for (var i=0; i<items.length; i++) {
+                		var lowerDate = new Date(Date.parse(items[i].lowerBound));
+                		if ((this.minDate==null) || (lowerDate < this.minDate)) {
+                			this.minDate = lowerDate;
+                		}
+                		var upperDate = new Date(Date.parse(items[i].upperBound));
+                		if ((this.maxDate==null) || (upperDate > this.maxDate)) {
+                			this.maxDate = upperDate;
+                		}
+                	}
                     // set flag to indicate the date is available
                     dateAvailable = true;
                     // get start date and end date (in string format)
-                    startDateStr = items[0].lowerBound;
-                    endDateStr = items[0].upperBound;
+                    this.startDate = this.minDate;
+                    this.endDate = this.maxDate;
                     if (selItems && selItems.length > 0) { // dates are selected
                         // get selected values instead
-                        startDateStr = selItems[0].lowerBound;
-                        endDateStr = selItems[0].upperBound;
+                    	this.startDate = new Date(Date.parse(selItems[0].lowerBound));
+                    	this.endDate = new Date(Date.parse(selItems[0].upperBound));
                     }
-                    // convert from string to Date object
-                    this.startDate = new Date(Date.parse(startDateStr));
-                    this.endDate = new Date(Date.parse(endDateStr));
                 }
                 if (this.initialized) {
                     // just update the pickers dates
                     this.$el.find("#startDate").text(this.startDate.toDateString());
                     var p1 = this.$el.find(".startDatePicker");
-                    p1.datepicker("setDate",new Date(Date.parse(this.startDate)));
+                    p1.datepicker({ minDate: this.minDate });
+                    p1.datepicker("setDate",this.startDate);
                     
                     this.$el.find("#endDate").text(this.endDate.toDateString());
                     var p2 = this.$el.find(".endDatePicker");
-                    p2.datepicker("setDate",new Date(Date.parse(this.endDate)));
+                    p2.datepicker({ maxDate: this.maxDate });
+                    p2.datepicker("setDate",this.endDate);
                 } else {
                     // build the date pickers
                     var selHTML = "";
@@ -149,27 +163,43 @@ define(['jquery','backbone', 'hbs!jssdk/sdk/templates/squid_api_filters_continuo
         renderPicker : function(me) {
             // build the date pickers (using classes instead of id to select the pickers as this is a bug in datePicker)
             var p1 = me.$el.find(".startDatePicker");
+            var p2 = me.$el.find(".endDatePicker");
             p1.datepicker({
                     changeMonth: true,
                     changeYear: true,
                     defaultDate: me.startDate,
+                    minDate: me.minDate,
+                    maxDate: me.maxDate,
                     onSelect : function(date) {
-                        me.startDate = new Date(Date.parse(date));
-                        if (me.parent) {
-                            me.parent.changeSelection(me);
-                        }
+                    	selDate = new Date(Date.parse(date));
+                    	if (selDate <= me.endDate) {
+	                        me.startDate = selDate;
+	                        if (me.parent) {
+	                            me.parent.changeSelection(me);
+	                        } 
+                    	} else {
+                    		// revert
+                    		p1.datepicker( "setDate", me.startDate );
+                    	}
                     }
                 });
-            var p2 = me.$el.find(".endDatePicker");
             p2.datepicker({
                     changeMonth: true,
                     changeYear: true,
                     defaultDate: me.endDate,
+                    minDate: me.minDate,
+                    maxDate: me.maxDate,
                     onSelect : function(date) {
-                        me.endDate = new Date(Date.parse(date));
-                        if (me.parent) {
-                            me.parent.changeSelection(me);
-                        }
+                    	selDate = new Date(Date.parse(date));
+                    	if (selDate >= me.startDate) {
+	                        me.endDate = selDate;
+	                        if (me.parent) {
+	                            me.parent.changeSelection(me);
+	                        }
+                    	} else {
+                    		// revert
+                    		p2.datepicker( "setDate", me.endDate );
+                    	}
                     }
                 });
             
