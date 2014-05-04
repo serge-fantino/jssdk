@@ -3,86 +3,113 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
     var controller = {
 
         fakeServer: null,
+        
+        /**
+         * Create (and execute) a new Job.
+         */
+        createJob: function(jobModel, selection, successCallback) {
 
-        computeFacets: function(filtersModel) {
-            // create a new FacetJob
-            var facetJob = new controller.ProjectFacetJob();
-            facetJob.set("id", {
-                projectId: filtersModel.id.projectId,
-                facetJobId: null
-            });
-            facetJob.set("domains", filtersModel.get("domains"));
-
-            var userSelection = null;
-            if (filtersModel.get("selection")) {
-                userSelection = filtersModel.get("selection");
+        	jobModel.set({"userSelection" :  null}, {"silent" : true});
+        	jobModel.set("status","RUNNING");
+    
+        	// create a new Job
+            if (!selection) {
+            	selection =  jobModel.get("selection");
             }
-            filtersModel.set("selection", null);
-            facetJob.set("selection", userSelection);
-            facetJob.set("error", null);
-            facetJob.on("change:id", function(event) {
-            	if (event.get("status") == "DONE") {
-	            	if (!event.get("error")) {
-	            		// update the filters Model
-	            		var facets = event.get("results").facets;
-	                    filtersModel.set("selection", {"facets" : facets});
-	                    filtersModel.set("readyStatus", true);
-	            	} else {
-	            		filtersModel.set("error", event.get("error"));
-	            	}
-            	} else {
-	                // fetch the job results
-	                var facetJobResult = new controller.ProjectFacetJobResult();
-	                facetJobResult.set("id", event.id);
-	
-	                facetJobResult.on("change", function(event) {
-	                    var facets = event.get("facets");
-	                    // update the filters Model
-	                    filtersModel.set("selection", {"facets" : facets});
-	                    filtersModel.set("readyStatus", true);
-	                }, this);
-	
-	                if (facetJob.get("error") === null) {
-	                    // get the results from API
-	                    facetJobResult.fetch({
-	                        error: function(model, error) {
-	                            squid_api.model.error.set("errorMessage", error);
-	                            filtersModel.set("readyStatus", true);
-	                            filtersModel.set("error", {message : error.statusText});
-	                        },
-	                        success: function() {
-	                            squid_api.model.error.set("errorMessage", null);
-	                        }
-	                    });
-	                    if (this.fakeServer) {
-	                        this.fakeServer.respond();
-	                    }
-	                }
-	                else {
-	                    // in case of error init the models
-	                    filtersModel.set("error", event.get("error"));
-	                }
-            	}
-            }, this);
+            
+            var job = new controller.ProjectFacetJob();
+            var projectId;
+            if (jobModel.id.projectId) {
+                projectId = jobModel.id.projectId;
+            } else {
+                projectId = jobModel.get("projectId");
+            }
 
-            // save the facetJob to API
-            facetJob.save({}, {
-                error: function(model, error) {
-                    filtersModel.set("error", {message : error.statusText});
-                }
-            });
+            job.set({"id" : {
+                    projectId: projectId},
+                    "domains" : jobModel.get("domains"),
+                    "selection": selection});
 
+            // save the job
             if (this.fakeServer) {
                 this.fakeServer.respond();
             }
+            
+            job.save({}, {
+            	success : function(model, response) {
+                    console.log("create job success");
+                    if (successCallback) {
+                    	successCallback(model, jobModel);
+                    }
+                },
+                error: function(model, response) {
+                	console.log("create job error");
+                    squid_api.model.error.set("errorMessage", response);
+                    jobModel.set("error", response);
+                    jobModel.set("status", "DONE");
+                }
+                
+            });
 
+        },
+
+        jobCreationCallback : function(model, jobModel) {
+	        squid_api.model.error.set("errorMessage", null);
+	        jobModel.set("jobId", model.get("id"));
+	        if (model.get("status") == "DONE") {
+	        	jobModel.set("error", model.get("error"));
+	        	jobModel.set("selection", {"facets" : model.get("results").facets});
+	        	jobModel.set("status", "DONE");
+	        } else {
+	        	// try to get the results
+	        	controller.getJobResults(jobModel, filters);
+	        }
+        },
+        
+        /**
+         * Create (and execute) a new Job, then retrieve the results.
+         */
+        compute: function(jobModel, selection) {
+            this.createJob(jobModel, selection, this.jobCreationCallback);
+        },
+        
+        /**
+         * retrieve the results.
+         */
+        getJobResults: function(jobModel) {
+        	console.log("get JobResults");
+            var jobResults = new controller.ProjectFacetJobResult();
+            jobResults.set("id", jobModel.get("jobId"));
+
+            // get the results from API
+            jobResults.fetch({
+                error: function(model, response) {
+            		squid_api.model.error.set("errorMessage", response);
+            		jobModel.set("error", {message : response.statusText});
+            		jobModel.set("status", "DONE");
+                },
+                success: function(model, response) {
+                	if (model.get("apiError") && (model.get("apiError") == "COMPUTING_IN_PROGRESS")) {
+                		// retry
+                		controller.getJobResults(jobModel);
+                	} else {
+	                    // update the Model
+	                    squid_api.model.error.set("errorMessage", null);
+	                    jobModel.set("error", null);
+	                    jobModel.set("selection", {"facets" : model.get("facets")});
+	                    jobModel.set("status", "DONE");
+                	}
+                }
+            });
+            if (this.fakeServer) {
+                this.fakeServer.respond();
+            }
         },
         
         FiltersModel: Backbone.Model.extend({
             setProjectId : function(projectId) {
                 this.set("id", {
-                        "projectId": projectId,
-                        "analysisJobId": null
+                        "projectId": projectId
                 });
                 return this;
             },
@@ -128,13 +155,17 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                     "id" : -1,
                     "value" : value
                 });
-            }
+            },
+            
+            isDone : function() {
+        		return (this.get("status") == "DONE");
+        	}
         })
     };
 
     controller.ProjectFacetJob = squid_api.model.ProjectModel.extend({
         urlRoot: function() {
-            return squid_api.model.ProjectModel.prototype.urlRoot.apply(this, arguments) + "/facetjobs/" + (this.id.facetJobId === null ? "" : this.id.facetJobId);
+            return squid_api.model.ProjectModel.prototype.urlRoot.apply(this, arguments) + "/facetjobs/" + (this.id.facetJobId ? this.id.facetJobId : "");
         },
         error: null,
         domains: null,

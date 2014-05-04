@@ -84,7 +84,7 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
             
             var timeoutMillis = args.timeoutMillis;
             if (!timeoutMillis) {
-                timeoutMillis = 60*60*1000;
+                timeoutMillis = 10*1000; // 10 Sec.
             }
             this.setTimeoutMillis(timeoutMillis);
             
