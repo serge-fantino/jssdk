@@ -27,32 +27,6 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
         }),
         
         initialize: function(options) {
-            if (this.model) {
-                var me = this;
-                if (this.initialSelection == null) {
-                    // duplicate the initial model (once)
-                    this.initialModel = $.extend(true, {}, this.model.attributes);
-                }
-                // set the current model
-                this.currentModel = new FacetJobController.FiltersModel();
-                this.currentModel.set($.extend(true, {}, this.model.attributes));
-                this.currentModel.on('change:selection', function() {
-                    me.render();
-                    if (me.currentModel.get("selection")) {
-                    	me.currentModel.set("enabled",true);
-                    }
-                    }, this);
-                this.currentModel.on('change:enabled', function() {
-                	me.setEnable(me.currentModel.get("enabled"));
-                    }, this);
-                // listen for some model events
-                this.model.on('change:selection', function() {
-                    // update the current model
-                    me.currentModel.set($.extend(true, {}, me.model.attributes));
-                    }, this);
-                this.model.on('change:error', this.render, this);
-                this.model.on('change:enabled', this.setEnable, this);
-            }
             if (options.pickerVisible && (options.pickerVisible == true)) {
                 this.pickerAlwaysVisible = true;
             }
@@ -63,6 +37,37 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 this.template = options.template;
             } else {
                 this.template = defaultTemplate;
+            }
+            if (this.model) {
+                var me = this;
+                if (this.initialSelection == null) {
+                    // duplicate the initial model (once)
+                    this.initialModel = $.extend(true, {}, this.model.attributes);
+                }
+                
+                // build the current model
+                this.currentModel = new FacetJobController.FiltersModel();
+                // set the current model
+                var attributesClone = $.extend(true, {}, me.model.attributes);
+                me.currentModel.set(attributesClone);
+                
+                this.currentModel.on('change:status', function() {
+                    if (me.currentModel.isDone()) {
+                    	me.currentModel.set("enabled",true);
+                    }
+                    me.render();
+                    }, this);
+                this.currentModel.on('change:enabled', function() {
+                	me.setEnable(me.currentModel.get("enabled"));
+                    }, this);
+                // listen for some model events
+                this.model.on('change:selection', function() {
+                    // update the current model
+                	var attributesClone = $.extend(true, {}, me.model.attributes);
+                    me.currentModel.set("selection", attributesClone.selection);
+                    me.render();
+                    }, this);
+                this.model.on('change:enabled', this.setEnable, this);
             }
         },
 
@@ -139,22 +144,22 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
             }
             // recompute the current facets
             this.currentModel.set("enabled",false);
-            FacetJobController.computeFacets(this.currentModel);
+            FacetJobController.compute(this.currentModel);
             
         },
         
         applySelection: function() {
         	if (this.currentModel.get("enabled") == true) {
-	            // update the model with current one
-	            this.model.set(this.currentModel.attributes, {"silent" : true});
-	            this.model.trigger("change:userSelection", this.model);
+	            // update the model selection with current
+	            this.model.set("selection", this.currentModel.get("selection"));
         	}
         },
         
         cancelSelection: function() {
         	if (this.currentModel.get("enabled") == true) {
 	            // update the current model with the original model
-	            this.currentModel.set($.extend(true, {}, this.model.attributes));
+	            var attributesClone = $.extend(true, {}, this.model.attributes);
+	            this.currentModel.set("selection", attributesClone.selection);
 	            this.render();
         	}
         },
@@ -176,7 +181,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
 			    this.$el.find(".sq-error").hide();
                 var enabled = this.model.get("enabled");
                 var sel = this.currentModel.get("selection");
-                if (!sel) {
+                if ((!sel) || (this.currentModel.get("status") == "RUNNING")) {
                     this.$el.find(".sq-wait").show();
                 } else {
                     var facets = sel.facets;

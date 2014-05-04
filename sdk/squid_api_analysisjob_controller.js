@@ -1,4 +1,4 @@
-define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
+define(['jquery', 'backbone', 'jssdk/sdk/squid_api'], function($, Backbone, squid_api) {
 
     var controller = {
 
@@ -6,20 +6,21 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
 
         /**
          * Create (and execute) a new AnalysisJob.
+         * @returns a Jquery Deferred
          */
-        createAnalysisJob: function(analysisModel, filters) {
+        createAnalysisJob: function(analysisModel, filters, observer) {
 
-            analysisModel.set({
-                readyStatus: false
-            }, {silent : true});
-            
-            analysisModel.set("results", null);
+        	if (!observer) {
+        		observer = $.Deferred(); 
+        	}
+        	
+            analysisModel.set("status","RUNNING");
     
-            var userSelection;
-            if (filters) {
-                userSelection = filters.get("selection");
+            var selection;
+            if (!filters) {
+                selection =  analysisModel.get("selection");
             } else {
-                userSelection =  analysisModel.get("selection");
+            	selection =  filters.get("selection");
             }
 
             // create a new AnalysisJob
@@ -30,118 +31,126 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
             } else {
                 projectId = analysisModel.get("projectId");
             }
-            analysisJob.set("id", {
+            analysisJob.set({"id" : {
                     projectId: projectId,
-                    analysisJobId: null});
-            analysisJob.set("domains", analysisModel.get("domains"));
-            analysisJob.set("dimensions", analysisModel.get("dimensions"));
-            analysisJob.set("metrics", analysisModel.get("metrics"));
-            analysisJob.set("autoRun", analysisModel.get("autoRun"));
-            analysisJob.set("selection", userSelection);
-            analysisJob.set("error", null);
+                    analysisJobId: null},
+                    "domains" : analysisModel.get("domains"),
+                    "dimensions": analysisModel.get("dimensions"),
+                    "metrics": analysisModel.get("metrics"),
+                    "autoRun": analysisModel.get("autoRun"),
+                    "selection": selection});
 
             // save the analysisJob to API
+            if (this.fakeServer) {
+                this.fakeServer.respond();
+            }
+            
             analysisJob.save({}, {
-                error: function(model, response) {
-                	console.log("createAnalysis error");
-                    squid_api.model.error.set("errorMessage", response);
-                    analysisModel.set("status", model.get("status"));
-                    analysisModel.set("error", model.get("error"));
-                    analysisModel.set("results", model.get("results"));
-                    analysisModel.set({"readyStatus": true});
-                    analysisModel.set("jobId", model.get("id"));
-                },
-                success : function(model, response) {
+            	success : function(model, response) {
                     console.log("createAnalysis success");
                     squid_api.model.error.set("errorMessage", null);
-                    analysisModel.set("status", model.get("status"));
-                    analysisModel.set("error", model.get("error"));
-                    analysisModel.set("results", model.get("results"));
-                    analysisModel.set({"readyStatus": true});
-                    analysisModel.set("jobId", model.get("id"));
+        	        analysisModel.set("jobId", model.get("id"));
+        	        observer.resolve(model, response);
+                },
+                error : function(model, response) {
+                	console.log("createAnalysis error");
+                    squid_api.model.error.set("errorMessage", response);
+                    analysisModel.set("error", response);
+                    analysisModel.set("status", "DONE");
+                    observer.reject(model, response);
+                }
+            });
+            
+            return observer;
+        },
+        
+        /**
+         * Create (and execute) a new AnalysisJob, then retrieve the results.
+         */
+        computeAnalysis: function(analysisModel, filters, observer) {
+        	if (!observer) {
+        		observer = $.Deferred(); 
+        	}
+            this.createAnalysisJob(analysisModel, filters)
+            	.done(function(model, response) {
+            		if (model.get("status") == "DONE") {
+        	            analysisModel.set("error", model.get("error"));
+        	            analysisModel.set("results", model.get("results"));
+        	            analysisModel.set("status", "DONE");
+        	            observer.resolve(model, response);
+        	        } else {
+        	        	// try to get the results
+        	        	controller.getAnalysisJobResults(observer, analysisModel);
+        	        }
+            	})
+            	.fail(function(model, response) {
+            		observer.reject(model, response);
+            	});
+            	
+            return observer;
+        },
+        
+        /**
+         * retrieve the results.
+         */
+        getAnalysisJobResults: function(observer, analysisModel) {
+        	console.log("getAnalysisJobResults");
+            var analysisJobResults = new controller.ProjectAnalysisJobResult();
+            analysisJobResults.set("id", analysisModel.get("jobId"));
+
+            // get the results from API
+            analysisJobResults.fetch({
+                error: function(model, response) {	
+            		squid_api.model.error.set("errorMessage", response);
+            		analysisModel.set("error", {message : response.statusText});
+            		analysisModel.set("status", "DONE");
+            		observer.reject(model, response);
+                },
+                success: function(model, response) {
+                	if (model.get("apiError") && (model.get("apiError") == "COMPUTING_IN_PROGRESS")) {
+                		// retry
+                		controller.getAnalysisJobResults(observer, analysisModel);
+                	} else {
+	                    // update the analysis Model
+	                    squid_api.model.error.set("errorMessage", null);
+	                    analysisModel.set("error", null);
+	                    analysisModel.set("results", model.toJSON());
+	                    analysisModel.set("status", "DONE");
+	                    observer.resolve(model, response);
+                	}
                 }
             });
             if (this.fakeServer) {
                 this.fakeServer.respond();
             }
         },
-
-        /**
-         * Create (and execute) a new AnalysisJob, then retrieve the results.
-         */
-        computeAnalysis: function(analysisModel, filters) {
-            var me = this;
-            analysisModel.once("change:jobId", function() {
-                me.getAnalysisJobResults(analysisModel, filters);
-            });
-            this.createAnalysisJob(analysisModel, filters);
-        },
         
         /**
          * Create (and execute) a new MultiAnalysisJob, retrieve the results 
          * and set the 'done' or 'error' attribute to true when all analysis are done or any failed.
          */
-        computeMultiAnalysis: function(multiAnalysisModel, filters) {
+        computeMultiAnalysis: function(multiAnalysisModel, selection) {
             var me = this;
-            multiAnalysisModel.set({"done": false, "error": false},{"silent":true});
+            multiAnalysisModel.set("status", "RUNNING");
             var analyses = multiAnalysisModel.get("analyses");
             var analysesCount = analyses.length;
-            var analysesPendingCount = analysesCount;
+            // build all jobs
+            var jobs = [];
             for (var i=0; i<analysesCount; i++) {
             	var analysisModel = analyses[i];
-	            analysisModel.once("change:jobId", function(model) {
-	            	model.on("change", function() {
-	            		if (model.get("error") != null) {
-	            			multiAnalysisModel.set("error", true);
-	            		} else {
-	            			if (model.get("results") != null) {
-	            				analysesPendingCount--;
-	    	            		if (analysesPendingCount == 0) {
-	    	            			multiAnalysisModel.set("done", true);
-	    	            		}
-	            			}
-	            		}
-	            	});
-	                me.getAnalysisJobResults(model, filters);
-	            });
-	            this.createAnalysisJob(analysisModel, filters);
+	            var observer = $.Deferred(); 
+	            jobs.push(this.computeAnalysis(analysisModel, selection, observer));
             }
-        },
-        
-        /**
-         * retrieve the results.
-         */
-        getAnalysisJobResults: function(analysisModel, filters) {
-        	if (analysisModel.get("status") != "DONE") {
-                console.log("getAnalysisJobResults");
-                var analysisJobResult = new controller.ProjectAnalysisJobResult();
-                analysisJobResult.set("id", analysisModel.get("jobId"));
-
-                analysisJobResult.on("change", function(event) {
-                    // update the analysis Model
-                    if (event.get("error") == null) {
-                    	var results = event.toJSON();
-                    	console.log("getAnalysisResults # rows : "+results.rows.length);
-                    	analysisModel.set({"results" : results});
-                    } else {
-                    	console.log("getAnalysisResults error : "+event.get("error"));
-                    	analysisModel.set({"error" : event.get("error")});
-            		}
-                    squid_api.model.error.set("errorMessage", null);
-                }, this);
-
-                // get the results from API
-                analysisJobResult.fetch({
-                    error: function(model, error) {
-                        squid_api.model.error.set("errorMessage", error);
-                        analysisModel.set("error", {message : error.statusText});
-                    },
-                    success: function() {}
-                });
-                if (this.fakeServer) {
-                    this.fakeServer.respond();
-                }
-            }
+            console.log("analysesCount : "+analysesCount);
+            // wait for jobs completion
+            $.when.apply($, jobs)
+            	.done( function(model, response) {
+            		multiAnalysisModel.set("error", model.get("error"));
+        			multiAnalysisModel.set("status", "DONE");
+            	})
+            	.fail( function(model, response) {
+            		multiAnalysisModel.set("status", "DONE");
+            	});
         },
 
         AnalysisModel: Backbone.Model.extend({
@@ -191,13 +200,17 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                 }
                 this.set("metrics", metrics);
                 return this;
-            }
+            },
+            
+            isDone : function() {
+        		return (this.get("status") == "DONE");
+        	}
         }),
         
         MultiAnalysisModel: Backbone.Model.extend({
-        	analyses : null,
-        	done : false,
-        	error: false
+        	isDone : function() {
+        		return (this.get("status") == "DONE");
+        	}
         })
 
     };
@@ -205,7 +218,7 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
     // ProjectAnalysisJob Model
     controller.ProjectAnalysisJob = squid_api.model.ProjectModel.extend({
             urlRoot: function() {
-                return squid_api.model.ProjectModel.prototype.urlRoot.apply(this, arguments) + "/analysisjobs/" + (this.id.analysisJobId === null ? "" : this.id.analysisJobId);
+                return squid_api.model.ProjectModel.prototype.urlRoot.apply(this, arguments) + "/analysisjobs/" + (this.id.analysisJobId ? this.id.analysisJobId : "");
             },
             error: null,
             domains: null,
