@@ -38,18 +38,27 @@ define([
         getSelectedItems: function() {
             var selectedItems = [];
             var val = this.$el.find("select").val();
-            if (val != '') {
-                selectedItems.push({
-                    "id": val,
-                    "value": val,
-                    "type": "v"
-                });
+            var values = [];
+            if (!val instanceof Array) {
+            	values.push(val);
+            } else {
+            	values = val;
+            }
+            for (var i=0; i<values.length; i++) {
+            	var v = values[i];
+	            if (v != '') {
+	                selectedItems.push({
+	                    "id": v,
+	                    "value": v,
+	                    "type": "v"
+	                });
+	            }
             }
             return selectedItems;
         },
 
 		render : function() {
-			var selHTML = "";
+			var selHTML = null;
 			if (this.model && this.model.get('dimension')) {
 				var items = this.model.get('items');
 				var selItems = this.model.get('selectedItems');
@@ -72,19 +81,26 @@ define([
 								break;
 							}
 						}
-						options.push({value : items[j].id, label : items[j].value, selected : selected});
+						options.push({"value" : items[j].id, "label" : items[j].value, "selected" : selected});
 					}
 				}
+				var displaySize = options.length>10?10:options.length;
 				// get HTML template and fill corresponding data
 				selHTML = this.template({
-					selAvailable : selAvailable,
-					facetId : facetId,
-					name : name,
-					options : options
+					"selAvailable" : selAvailable,
+					"facetId" : facetId,
+					"name" : name,
+					"options" : options,
+					"displaySize" : displaySize
 				});
 			}
 			// render HTML
-			this.$el.html(selHTML);
+			if (selHTML) {
+				this.$el.html(selHTML);
+			} else {
+				this.$el.html("");
+			}
+			
 			return this;
 		},
 		
