@@ -68,6 +68,16 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
                     }
                 }
                 return c;
+            },
+            
+            clearLogin : function() {
+            	var cookiePrefix = "sq-token";
+                squid_api.utils.writeCookie(cookiePrefix + "_" + squid_api.customerId, "", - 100000, null);
+                squid_api.utils.writeCookie(cookiePrefix, "", - 100000, null);
+                squid_api.model.login.set({
+                    accessToken: null,
+                    login: null
+                });
             }
         },
 
@@ -136,7 +146,48 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
                 url += delim + name + "=" + value;
             }
             return url;
-        }
+        },
+        
+        /*
+         * Overriding fetch to handle token expiration
+         */
+		fetch : function(options) {
+			if (!options) {
+				options = {error : null}; 
+			}
+			options.error =  function(model, response, options) {
+				if (response.status == 401) {
+                    // this is an auth issue
+                    squid_api.model.error.set("errorMessage", "invalid token");
+                    squid_api.utils.clearLogin();
+                } else {
+                	// normal behavior
+                	error.call(model, response, options);
+                }
+			}
+			return Backbone.Model.prototype.fetch.call(this, options);
+		},
+
+		/*
+         * Overriding save to handle token expiration
+         */
+		save : function(attributes, options) {
+			if (!options) {
+				options = {error : null}; 
+			}
+			options.error =  function(model, response, options) {
+				if (response.status == 401) {
+                    // this is an auth issue
+                    squid_api.model.error.set("errorMessage", "invalid token");
+                    squid_api.utils.clearLogin();
+                } else {
+                	// normal behavior
+                	error.call(model, response, options);
+                }
+			}
+			return Backbone.Model.prototype.save.call(this, attributes, options);
+		}
+        
     });
 
     squid_api.model.BaseCollection = Backbone.Collection.extend({
@@ -192,7 +243,7 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
         /**
          * Login the user
          */
-        setAccessToken: function(token, callback, cookieExpiration) {
+        setAccessToken: function(token, cookieExpiration) {
             if (!cookieExpiration) {
                 cookieExpiration = 120; // 2 hours
             }
@@ -228,10 +279,6 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
                         // this is not just a login issue
                         squid_api.model.error.set("errorMessage", error);
                     }
-
-                    if (callback) {
-                        callback(me, false);
-                    }
                 },
                 success: function(model) {
                     // set the customerId
@@ -240,23 +287,14 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
                     if (model.get("clientId") != this.clientId) {
                         squid_api.model.loading.set("loading", false);
                         model.set("login", null);
-                        if (callback) {
-                            callback(model, false);
-                        }
                     }
 
                     // update login model from server
                     me.fetch({
                         error: function(model, error) {
                             squid_api.model.loading.set("loading", false);
-                            model.set("login", null);
-                            if (error.status != 401) {
-                                // this is not just a login issue
-                                squid_api.model.error.set("errorMessage", error);
-                            }
-                            if (callback) {
-                                callback(model, false);
-                            }
+                            // this is not just a login issue
+                            squid_api.model.error.set("errorMessage", error);
                         },
 
                         success: function(model) {
@@ -266,9 +304,6 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
                                 squid_api.utils.writeCookie(cookiePrefix + "_" + squid_api.customerId, "", cookieExpiration, token);
                                 // write in a global cookie
                                 squid_api.utils.writeCookie(cookiePrefix, "", cookieExpiration, token);
-                            }
-                            if (callback) {
-                                callback(model, true);
                             }
                         }
                     });
