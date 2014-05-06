@@ -213,7 +213,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                         		booleanGroupFacet.items.push({"type" : "v", "id" : facet.dimension.oid, "value" : facet.dimension.name});
                         		if (facet.selectedItems.length > 0) {
                         			// this facet is selected
-                        			booleanGroupFacet.selectedItems = [{"type" : "v", "id" : facet.dimension.oid, "value" : facet.dimension.name}];
+                        			booleanGroupFacet.selectedItems.push({"type" : "v", "id" : facet.dimension.oid, "value" : facet.dimension.name});
                         		}
                         	}
                         }
