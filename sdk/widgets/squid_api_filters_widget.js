@@ -12,6 +12,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
         filterIds: null,
         displayCategorical: true,
         displayContinuous: true,
+        refreshOnChange: true,
         template : null,
         continuousFilterTemplate : null,
         categoricalFilterTemplate : null,
@@ -38,6 +39,9 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
             } else {
                 this.template = defaultTemplate;
             }
+            if (options.refreshOnChange != null) {
+                this.refreshOnChange = options.refreshOnChange;
+            }
             if (this.model) {
                 var me = this;
                 if (this.initialSelection == null) {
@@ -50,6 +54,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 // set the current model
                 var attributesClone = $.extend(true, {}, me.model.attributes);
                 me.currentModel.set(attributesClone);
+                me.currentModel.set("enabled", true);
                 
                 this.currentModel.on('change:status', function() {
                     if (me.currentModel.isDone()) {
@@ -143,8 +148,10 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                 }
             }
             // recompute the current facets
-            this.currentModel.set("enabled",false);
-            FacetJobController.compute(this.currentModel);
+            if (this.refreshOnChange) {
+	            this.currentModel.set("enabled",false);
+	            FacetJobController.compute(this.currentModel);
+            }
             
         },
         
@@ -161,6 +168,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
 	            var attributesClone = $.extend(true, {}, this.model.attributes);
 	            this.currentModel.set("selection", attributesClone.selection);
 	            this.render();
+	            console.log("cancelSelection");
         	}
         },
 
@@ -288,7 +296,8 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                                 dimension: facet.dimension,
                                 items: facet.items,
                                 selectedItems: facet.selectedItems
-                            });
+                            },{silent:true});
+                            model.trigger("change");
                         }
                     }
                 }
