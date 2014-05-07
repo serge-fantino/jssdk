@@ -148,44 +148,44 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
             return url;
         },
         
-        /*
-         * Overriding fetch to handle token expiration
-         */
-		fetch : function(options) {
+        errorFilter : function(options) {
+			var error;
 			if (!options) {
 				options = {error : null}; 
+			} else {
+				error = options.error;
 			}
 			options.error =  function(model, response, options) {
 				if (response.status == 401) {
                     // this is an auth issue
-                    squid_api.model.error.set("errorMessage", "invalid token");
+                    squid_api.model.status.set("message", "invalid token");
+                    squid_api.model.status.set("error", response);
                     squid_api.utils.clearLogin();
                 } else {
-                	// normal behavior
-                	error.call(model, response, options);
+                	if (error) {
+                		// normal behavior
+                		error.call(model, response, options);
+                	} else {
+                		// fallback behavior
+                		squid_api.model.status.set("error", response);
+                	}
                 }
 			}
-			return Backbone.Model.prototype.fetch.call(this, options);
+			return options;
+		},
+        
+        /*
+         * Overriding fetch to handle token expiration
+         */
+		fetch : function(options) {
+			return Backbone.Model.prototype.fetch.call(this, this.errorFilter(options));
 		},
 
 		/*
          * Overriding save to handle token expiration
          */
 		save : function(attributes, options) {
-			if (!options) {
-				options = {error : null}; 
-			}
-			options.error =  function(model, response, options) {
-				if (response.status == 401) {
-                    // this is an auth issue
-                    squid_api.model.error.set("errorMessage", "invalid token");
-                    squid_api.utils.clearLogin();
-                } else {
-                	// normal behavior
-                	error.call(model, response, options);
-                }
-			}
-			return Backbone.Model.prototype.save.call(this, attributes, options);
+			return Backbone.Model.prototype.save.call(this, attributes, this.errorFilter(options));
 		}
         
     });
@@ -273,32 +273,19 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
             
             tokenModel.fetch({
                 error: function(model, error) {
-                    squid_api.model.loading.set("loading", false);
                     squid_api.model.login.set("login", null);
-                    if (error.status != 401) {
-                        // this is not just a login issue
-                        squid_api.model.error.set("errorMessage", error);
-                    }
                 },
                 success: function(model) {
                     // set the customerId
                     squid_api.customerId = model.get("customerId");
                     // verify the clientId
                     if (model.get("clientId") != this.clientId) {
-                        squid_api.model.loading.set("loading", false);
                         model.set("login", null);
                     }
 
                     // update login model from server
                     me.fetch({
-                        error: function(model, error) {
-                            squid_api.model.loading.set("loading", false);
-                            // this is not just a login issue
-                            squid_api.model.error.set("errorMessage", error);
-                        },
-
                         success: function(model) {
-                            squid_api.model.loading.set("loading", false);
                             if ((token) && (typeof token != "undefined")) {
                                 // write in a customer cookie
                                 squid_api.utils.writeCookie(cookiePrefix + "_" + squid_api.customerId, "", cookieExpiration, token);
@@ -337,7 +324,8 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
             });
 
             request.fail(function(jqXHR, textStatus, errorThrown) {
-                squid_api.model.error.set("logout failed", errorThrown);
+                squid_api.model.status.set("message", "logout failed");
+                squid_api.model.status.set("error", errorThrown);
             });
         }
 
@@ -373,27 +361,11 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
 
 
     // Status Model
-    squid_api.model.StatusModel = squid_api.model.BaseModel.extend({
-
-        urlRoot: function() {
-            return this.baseRoot() + "/status";
-        }
-
+    squid_api.model.StatusModel = squid_api.model.BaseModel.extend();
+    squid_api.model.status = new squid_api.model.StatusModel({
+    	status : null,
+    	error : null
     });
-    squid_api.model.status = new squid_api.model.StatusModel();
-
-
-    // Error Model
-    squid_api.model.ErrorModel = squid_api.model.BaseModel.extend({
-        errorMessage: null
-    });
-    squid_api.model.error = new squid_api.model.ErrorModel();
-
-    // Global loading Model
-    squid_api.model.LoadingModel = squid_api.model.BaseModel.extend({
-        loading: true
-    });
-    squid_api.model.loading = new squid_api.model.LoadingModel();
 
     /*
      * --- Meta Model ---
