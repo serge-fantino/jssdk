@@ -34,7 +34,7 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
             if (this.fakeServer) {
                 this.fakeServer.respond();
             }
-            
+
             job.save({}, {
             	success : function(model, response) {
                     console.log("create job success");
@@ -44,7 +44,6 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                 },
                 error: function(model, response) {
                 	console.log("create job error");
-                    squid_api.model.error.set("errorMessage", response);
                     jobModel.set("error", response);
                     jobModel.set("status", "DONE");
                 }
@@ -54,7 +53,6 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
         },
 
         jobCreationCallback : function(model, jobModel) {
-	        squid_api.model.error.set("errorMessage", null);
 	        jobModel.set("jobId", model.get("id"));
 	        if (model.get("status") == "DONE") {
 	        	jobModel.set("error", model.get("error"));
@@ -84,7 +82,6 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
             // get the results from API
             jobResults.fetch({
                 error: function(model, response) {
-            		squid_api.model.error.set("errorMessage", response);
             		jobModel.set("error", {message : response.statusText});
             		jobModel.set("status", "DONE");
                 },
@@ -94,7 +91,6 @@ define(['backbone', 'jssdk/sdk/squid_api'], function(Backbone, squid_api) {
                 		controller.getJobResults(jobModel);
                 	} else {
 	                    // update the Model
-	                    squid_api.model.error.set("errorMessage", null);
 	                    jobModel.set("error", null);
 	                    jobModel.set("selection", {"facets" : model.get("facets")});
 	                    jobModel.set("status", "DONE");

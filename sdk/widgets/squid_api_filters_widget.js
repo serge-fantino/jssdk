@@ -2,7 +2,7 @@ define(['jquery','backbone',
 'jssdk/sdk/widgets/squid_api_filters_categorical_widget', 
 'jssdk/sdk/widgets/squid_api_filters_continuous_widget',
 'jssdk/sdk/squid_api_facetjob_controller',
-'hbs!jssdk/sdk/templates/squid_api_filters_widget', 'underscore', 'bootstrap-multiselect'], 
+'hbs!jssdk/sdk/templates/squid_api_filters_widget', 'underscore'], 
 function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobController, defaultTemplate) {
     
     var View = Backbone.View.extend({
@@ -306,7 +306,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                     }
                 }
 			}
-			container.find('.multiselect').multiselect(this.multiselectOptions);		
+			container.find('.multiselect').multiselect(this.multiselectOptions);
             return this;
         },
 

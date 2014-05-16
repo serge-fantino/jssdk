@@ -48,13 +48,11 @@ define(['jquery', 'backbone', 'jssdk/sdk/squid_api'], function($, Backbone, squi
             analysisJob.save({}, {
             	success : function(model, response) {
                     console.log("createAnalysis success");
-                    squid_api.model.error.set("errorMessage", null);
         	        analysisModel.set("jobId", model.get("id"));
         	        observer.resolve(model, response);
                 },
                 error : function(model, response) {
                 	console.log("createAnalysis error");
-                    squid_api.model.error.set("errorMessage", response);
                     analysisModel.set("error", response);
                     analysisModel.set("status", "DONE");
                     observer.reject(model, response);
@@ -100,8 +98,7 @@ define(['jquery', 'backbone', 'jssdk/sdk/squid_api'], function($, Backbone, squi
 
             // get the results from API
             analysisJobResults.fetch({
-                error: function(model, response) {	
-            		squid_api.model.error.set("errorMessage", response);
+                error: function(model, response) {
             		analysisModel.set("error", {message : response.statusText});
             		analysisModel.set("status", "DONE");
             		observer.reject(model, response);
@@ -112,7 +109,6 @@ define(['jquery', 'backbone', 'jssdk/sdk/squid_api'], function($, Backbone, squi
                 		controller.getAnalysisJobResults(observer, analysisModel);
                 	} else {
 	                    // update the analysis Model
-	                    squid_api.model.error.set("errorMessage", null);
 	                    analysisModel.set("error", null);
 	                    analysisModel.set("results", model.toJSON());
 	                    analysisModel.set("status", "DONE");
