@@ -72,8 +72,8 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
             
             clearLogin : function() {
             	var cookiePrefix = "sq-token";
-                squid_api.utils.writeCookie(cookiePrefix + "_" + squid_api.customerId, "", - 100000, null);
-                squid_api.utils.writeCookie(cookiePrefix, "", - 100000, null);
+                squid_api.utils.writeCookie(cookiePrefix + "_" + squid_api.customerId, "", -100000, null);
+                squid_api.utils.writeCookie(cookiePrefix, "", -100000, null);
                 squid_api.model.login.set({
                     accessToken: null,
                     login: null
@@ -148,13 +148,24 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
             return url;
         },
         
-        errorFilter : function(options) {
-			var error;
+        optionsFilter : function(options) {
+        	// success
+        	var success;
 			if (!options) {
-				options = {error : null}; 
+				options = {success : null, error : null}; 
 			} else {
-				error = options.error;
+				success = options.success;
 			}
+			options.success =  function(model, response, options) {
+				squid_api.model.status.setTaskDone(this);
+                // normal behavior
+				if (success) {
+					success.call(this, model, response, options);
+				}
+			};
+
+			var error;
+			error = options.error;
 			options.error =  function(model, response, options) {
 				if (response.status == 401) {
                     // this is an auth issue
@@ -164,13 +175,13 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
                 } else {
                 	if (error) {
                 		// normal behavior
-                		error.call(model, response, options);
+                		error.call(this.model, response, options);
                 	} else {
                 		// fallback behavior
                 		squid_api.model.status.set("error", response);
                 	}
                 }
-			}
+			};
 			return options;
 		},
         
@@ -178,14 +189,16 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
          * Overriding fetch to handle token expiration
          */
 		fetch : function(options) {
-			return Backbone.Model.prototype.fetch.call(this, this.errorFilter(options));
+			squid_api.model.status.addTask(this);
+			return Backbone.Model.prototype.fetch.call(this, this.optionsFilter(options));
 		},
 
 		/*
          * Overriding save to handle token expiration
          */
 		save : function(attributes, options) {
-			return Backbone.Model.prototype.save.call(this, attributes, this.errorFilter(options));
+			squid_api.model.status.addTask(this);
+			return Backbone.Model.prototype.save.call(this, attributes, this.optionsFilter(options));
 		}
         
     });
@@ -272,10 +285,10 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
             });
             
             tokenModel.fetch({
-                error: function(model, error) {
+                error: function(model, response, options) {
                     squid_api.model.login.set("login", null);
                 },
-                success: function(model) {
+                success: function(model, response, options) {
                     // set the customerId
                     squid_api.customerId = model.get("customerId");
                     // verify the clientId
@@ -314,13 +327,7 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
             });
 
             request.done(function(jsonData) {
-                var cookiePrefix = "sq-token";
-                squid_api.utils.writeCookie(cookiePrefix + "_" + squid_api.customerId, "", - 100000, null);
-                squid_api.utils.writeCookie(cookiePrefix, "", - 100000, null);
-                me.set({
-                    accessToken: null,
-                    login: null
-                });
+            	squid_api.utils.clearLogin();
             });
 
             request.fail(function(jqXHR, textStatus, errorThrown) {
@@ -361,10 +368,27 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
 
 
     // Status Model
-    squid_api.model.StatusModel = squid_api.model.BaseModel.extend();
+    squid_api.model.StatusModel = squid_api.model.BaseModel.extend({
+    	runningTasks : [],
+    	completedTasks : [],
+    	addTask : function(task) {
+    		this.runningTasks.push(task);
+    		this.set("status",this.STATUS_RUNNING);
+    	},
+    	setTaskDone : function(task) {
+    		var tasks = this.runningTasks.splice(task);
+    		this.completedTasks.push(task);
+    		if (tasks.length == 0) {
+    			this.set("status",this.STATUS_DONE);
+    		}
+    	}
+    });
     squid_api.model.status = new squid_api.model.StatusModel({
+    	STATUS_RUNNING : "RUNNING",
+    	STATUS_DONE : "DONE",
     	status : null,
-    	error : null
+    	error : null,
+    	message : null
     });
 
     /*
