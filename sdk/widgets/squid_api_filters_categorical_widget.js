@@ -39,7 +39,9 @@ define([
             var selectedItems = [];
             var val = this.$el.find("select").val();
             var values = [];
-            if (!val instanceof Array) {
+            if (!val) {
+            	// ignore
+            } else if (!val instanceof Array) {
             	values.push(val);
             } else {
             	values = val;

@@ -1,7 +1,7 @@
    {{#if selAvailable}}
         <!-- display filter name and selection -->
         <label for="{{facetId}}">{{name}}</label>
-        <select name="{{facetId}}" class="sq-select" id="{{facetId}}" multiple size="{{displaySize}}>
+        <select name="{{facetId}}" class="sq-select" id="{{facetId}}" multiple="multiple" size="{{displaySize}}>
             <option value="">-</option>
             {{#each options}}
                 <option value="{{value}}"

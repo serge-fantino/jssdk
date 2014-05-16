@@ -18,6 +18,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
         categoricalFilterTemplate : null,
         pickerAlwaysVisible : false,
         booleanGroupName : null,
+        multiselectOptions : {},
         
         filterModel: Backbone.Model.extend({
             facetId: null,
@@ -41,6 +42,9 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
             }
             if (options.refreshOnChange != null) {
                 this.refreshOnChange = options.refreshOnChange;
+            }
+            if (options.multiselectOptions != null) {
+                this.multiselectOptions = options.multiselectOptions;
             }
             if (this.model) {
                 var me = this;
@@ -302,7 +306,7 @@ function($,Backbone, CategoricalFilterView, ContinuousFilterView, FacetJobContro
                     }
                 }
 			}
-		container.find('.multiselect').multiselect();		
+			container.find('.multiselect').multiselect(this.multiselectOptions);		
             return this;
         },
 
