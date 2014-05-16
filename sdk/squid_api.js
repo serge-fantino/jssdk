@@ -157,7 +157,7 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
 				success = options.success;
 			}
 			options.success =  function(model, response, options) {
-				squid_api.model.status.setTaskDone(this);
+				squid_api.model.status.pullTask(model);
                 // normal behavior
 				if (success) {
 					success.call(this, model, response, options);
@@ -167,6 +167,7 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
 			var error;
 			error = options.error;
 			options.error =  function(model, response, options) {
+				squid_api.model.status.pullTask(model);
 				if (response.status == 401) {
                     // this is an auth issue
                     squid_api.model.status.set("message", "invalid token");
@@ -189,7 +190,7 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
          * Overriding fetch to handle token expiration
          */
 		fetch : function(options) {
-			squid_api.model.status.addTask(this);
+			squid_api.model.status.pushTask(this);
 			return Backbone.Model.prototype.fetch.call(this, this.optionsFilter(options));
 		},
 
@@ -197,7 +198,7 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
          * Overriding save to handle token expiration
          */
 		save : function(attributes, options) {
-			squid_api.model.status.addTask(this);
+			squid_api.model.status.pushTask(this);
 			return Backbone.Model.prototype.save.call(this, attributes, this.optionsFilter(options));
 		}
         
@@ -369,23 +370,26 @@ define(['jquery', 'backbone', 'jssdk/js/jquery-url'], function($, Backbone) {
 
     // Status Model
     squid_api.model.StatusModel = squid_api.model.BaseModel.extend({
+    	STATUS_RUNNING : "RUNNING",
+    	STATUS_DONE : "DONE",
     	runningTasks : [],
-    	completedTasks : [],
-    	addTask : function(task) {
+    	pushTask : function(task) {
     		this.runningTasks.push(task);
-    		this.set("status",this.STATUS_RUNNING);
+    		console.log("running tasks count : "+this.runningTasks.length);
+    		Backbone.Model.prototype.set.call(this,"status",this.STATUS_RUNNING);
     	},
-    	setTaskDone : function(task) {
-    		var tasks = this.runningTasks.splice(task);
-    		this.completedTasks.push(task);
-    		if (tasks.length == 0) {
-    			this.set("status",this.STATUS_DONE);
+    	pullTask : function(task) {
+    		var i = this.runningTasks.indexOf(task);
+    		if (i != -1) {
+    			this.runningTasks.splice(i, 1);
+    		}
+    		console.log("running tasks count : "+this.runningTasks.length);
+    		if (this.runningTasks.length == 0) {
+    			Backbone.Model.prototype.set.call(this,"status",this.STATUS_DONE);
     		}
     	}
     });
     squid_api.model.status = new squid_api.model.StatusModel({
-    	STATUS_RUNNING : "RUNNING",
-    	STATUS_DONE : "DONE",
     	status : null,
     	error : null,
     	message : null

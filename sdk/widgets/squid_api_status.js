@@ -30,7 +30,7 @@ define(['backbone', 'hbs!jssdk/sdk/templates/squid_api_status'], function(Backbo
         render: function() {
 			var error = this.model.get("error");
 			var status = this.model.get("status");
-			var running = (status != "DONE");
+			var running = (status != this.model.STATUS_DONE);
 			var failed = (error != null);
 			
 			if ((!running) && (!failed)) {
